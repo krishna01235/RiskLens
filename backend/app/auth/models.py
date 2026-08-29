@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import ForeignKey, Index, Text
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, CITEXT, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -16,8 +16,9 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    # CITEXT is handled as Text here; the migration adds the extension + column type.
-    email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    # CITEXT provides case-insensitive comparison and uniqueness at the DB level.
+    # The CITEXT extension is created in the initial migration before this table.
+    email: Mapped[str] = mapped_column(CITEXT, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(Text, nullable=False, default="user")
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
