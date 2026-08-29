@@ -1,0 +1,60 @@
+# docker-compose.override.yml — Local development overrides
+#
+# Applied automatically on top of docker-compose.yml when running
+# `docker compose up` locally. NOT used in CI or production.
+#
+# Key additions vs. base file:
+#   - Bind-mounts for hot reload (changes on disk → reflected immediately)
+#   - Exposed ports so host tools (psql, redis-cli, curl) can reach services
+#   - WATCHFILES_FORCE_POLLING for reliable file-watching inside Linux containers
+
+services:
+
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  api:
+    ports:
+      - "${API_PORT:-8000}:8000"
+    # Bind-mount source so uvicorn --reload picks up code changes
+    volumes:
+      - ./backend:/app
+    # Hot reload requires uvicorn to watch for file changes
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--reload",
+      ]
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+
+  frontend:
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    # In local dev, run next dev for hot reload instead of the built image
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    # Override the runner CMD with next dev via a separate dev-mode approach.
+    # We bind-mount source and use the node_modules from the image.
+    volumes:
+      - ./frontend:/frontend
+      - /frontend/node_modules   # anonymous volume keeps container node_modules
+      - /frontend/.next          # anonymous volume keeps build cache
+    command: ["npm", "run", "dev"]
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      WATCHPACK_POLLING: "true"
+
+  worker:
+    # Bind-mount source for easy iteration on worker code during development
+    volumes:
+      - ./backend:/app
