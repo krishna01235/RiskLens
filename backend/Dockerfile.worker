@@ -1,0 +1,30 @@
+# Shared base image for all worker processes.
+#
+# Usage in docker-compose.yml:
+#
+#   worker_name:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile.worker
+#     command: ["python", "-m", "workers.my_worker"]
+#
+# Each worker is selected by overriding the `command:` key in Compose;
+# this file intentionally has no default CMD so a misconfigured service
+# fails loudly rather than silently running the wrong thing.
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY pyproject.toml .
+COPY app/ app/
+COPY quant/ quant/
+COPY workers/ workers/
+COPY slack_bot/ slack_bot/
+
+RUN pip install --no-cache-dir -e .
+
+# No CMD — must be provided by the Compose service definition.
