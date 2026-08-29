@@ -56,19 +56,6 @@ See [`docs/implementation.md`](docs/Implementation.md) for the full engineering 
 
 ---
 
-## Build Progress
-
-| Phase | Description | Status |
-|---|---|---|
-| 1 | Project Foundation & Tooling | 🔄 In progress |
-| 2 | Docker & Local Dev Environment | ⏳ Pending |
-| 3 | Database Foundation | ⏳ Pending |
-| 4 | Authentication & Authorization | ⏳ Pending |
-| … | … | … |
-| 24 | Final Deployment & Docs | ⏳ Pending |
-
----
-
 ## Documentation
 
 - [`docs/implementation.md`](docs/Implementation.md) — Master engineering specification (source of truth)
