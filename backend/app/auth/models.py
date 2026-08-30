@@ -21,7 +21,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(CITEXT, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(Text, nullable=False, default="user")
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, default=datetime.utcnow
+    )  # noqa: E501
 
     # relationships
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
@@ -30,7 +32,7 @@ class User(Base):
     api_tokens: Mapped[list["ApiToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    portfolios: Mapped[list["Portfolio"]] = relationship(  # type: ignore[name-defined]
+    portfolios: Mapped[list["Portfolio"]] = relationship(  # type: ignore[name-defined]  # noqa: F821
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -50,7 +52,9 @@ class RefreshToken(Base):
     token_hash: Mapped[str] = mapped_column(Text, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, default=datetime.utcnow
+    )  # noqa: E501
 
     user: Mapped["User"] = relationship(back_populates="refresh_tokens")
 
@@ -67,10 +71,10 @@ class ApiToken(Base):
         nullable=False,
     )
     token_hash: Mapped[str] = mapped_column(Text, nullable=False)
-    scopes: Mapped[list[str]] = mapped_column(
-        ARRAY(Text), nullable=False, default=list
-    )
+    scopes: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
     revoked_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, default=datetime.utcnow
+    )  # noqa: E501
 
     user: Mapped["User"] = relationship(back_populates="api_tokens")

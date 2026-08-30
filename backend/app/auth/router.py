@@ -46,7 +46,7 @@ def _clear_refresh_cookie(response: Response) -> None:
 async def register(
     body: RegisterRequest,
     response: Response,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> TokenResponse:
     """Create a new account and return a token pair.
 
@@ -72,7 +72,7 @@ async def login(
     request: Request,  # noqa: ARG001  # kept for potential future rate-limit key
     body: LoginRequest,
     response: Response,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> TokenResponse:
     """Authenticate and return a token pair.
 
@@ -101,7 +101,7 @@ async def login(
 async def refresh_token(
     response: Response,
     refresh_token_cookie: str | None = Cookie(default=None, alias=_REFRESH_COOKIE),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> TokenResponse:
     """Rotate the refresh token and issue a new access token.
 
@@ -127,7 +127,7 @@ async def refresh_token(
 async def logout(
     response: Response,
     refresh_token_cookie: str | None = Cookie(default=None, alias=_REFRESH_COOKIE),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> None:
     """Revoke the current refresh token and clear the cookie.
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 from jose import JWTError, jwt
@@ -46,9 +46,7 @@ def create_access_token(user_id: uuid.UUID) -> str:
     not encrypted.
     """
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
+    expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     payload = {"sub": str(user_id), "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm=_ALGORITHM)
 
@@ -86,7 +84,7 @@ async def _create_refresh_token_record(
     record = RefreshToken(
         user_id=user_id,
         token_hash=_hash_token(raw),
-        expires_at=datetime.now(timezone.utc)
+        expires_at=datetime.now(UTC)
         + timedelta(days=settings.refresh_token_expire_days),
     )
     db.add(record)
@@ -101,7 +99,7 @@ async def _revoke_token_by_hash(db: AsyncSession, token_hash: str) -> None:
     )
     record = result.scalar_one_or_none()
     if record is not None and record.revoked_at is None:
-        record.revoked_at = datetime.now(timezone.utc)
+        record.revoked_at = datetime.now(UTC)
 
 
 # ── Public service functions ───────────────────────────────────────────────────
@@ -138,9 +136,7 @@ async def register(
     return user, access_token, raw_refresh
 
 
-async def login(
-    db: AsyncSession, email: str, password: str
-) -> tuple[User, str, str]:
+async def login(db: AsyncSession, email: str, password: str) -> tuple[User, str, str]:
     """Authenticate a user and issue a new token pair.
 
     Returns ``(user, access_token, raw_refresh_token)``.
@@ -157,9 +153,7 @@ async def login(
     return user, access_token, raw_refresh
 
 
-async def refresh(
-    db: AsyncSession, raw_refresh_token: str
-) -> tuple[str, str]:
+async def refresh(db: AsyncSession, raw_refresh_token: str) -> tuple[str, str]:
     """Rotate a refresh token and issue a new access token.
 
     Returns ``(new_access_token, new_raw_refresh_token)``.
@@ -175,7 +169,7 @@ async def refresh(
     )
     record = result.scalar_one_or_none()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if record is None:
         raise AuthError("Refresh token not found.", status_code=401)
     if record.revoked_at is not None:
@@ -183,7 +177,7 @@ async def refresh(
     # expires_at may be timezone-naive (DB stores UTC without tz info)
     expires_at = record.expires_at
     if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
+        expires_at = expires_at.replace(tzinfo=UTC)
     if expires_at < now:
         raise AuthError("Refresh token has expired.", status_code=401)
 
