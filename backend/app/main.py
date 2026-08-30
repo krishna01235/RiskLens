@@ -1,4 +1,30 @@
+"""main.py — FastAPI application factory.
+
+Mounts:
+  - CORS middleware (origins from settings)
+  - slowapi rate-limiter + 429 exception handler
+  - /auth router
+"""
+
+from __future__ import annotations
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+
+from app.auth.router import router as auth_router
+from app.config import get_settings
+
+settings = get_settings()
+
+# ── Rate limiter (shared instance) ────────────────────────────────────────────
+# Endpoints opt-in with @limiter.limit("5/minute") + request: Request param.
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+
+# ── Application ───────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="RiskLens API",
@@ -6,7 +32,28 @@ app = FastAPI(
     description="Event-driven quantitative risk monitoring platform.",
 )
 
+# CORS — allow the frontend origin(s) configured in settings
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,  # required for the httpOnly refresh cookie
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/health")
+# slowapi — must be added after CORS so it can read client IPs
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+app.add_middleware(SlowAPIMiddleware)
+
+# ── Routers ───────────────────────────────────────────────────────────────────
+
+app.include_router(auth_router, prefix="/auth")
+
+
+# ── Utility endpoints ─────────────────────────────────────────────────────────
+
+
+@app.get("/health", tags=["meta"])
 async def health() -> dict[str, str]:
     return {"status": "ok"}
