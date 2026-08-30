@@ -11,8 +11,8 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,18 +20,17 @@ from app.auth.models import RefreshToken, User
 from app.config import get_settings
 
 # ── Password hashing ──────────────────────────────────────────────────────────
-
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Uses the `bcrypt` package directly (passlib compat issues with bcrypt>=4).
 
 
 def hash_password(plain: str) -> str:
     """Return a bcrypt hash of *plain*."""
-    return _pwd_context.hash(plain)
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Return True if *plain* matches the stored bcrypt *hashed* value."""
-    return _pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
