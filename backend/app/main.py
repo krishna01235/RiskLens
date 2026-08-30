@@ -4,6 +4,8 @@ Mounts:
   - CORS middleware (origins from settings)
   - slowapi rate-limiter + 429 exception handler
   - /auth router
+  - /portfolios router (Phase 5)
+  - /market router stub (Phase 5; replaced by real router in Phase 6)
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from slowapi.util import get_remote_address
 
 from app.auth.router import router as auth_router
 from app.config import get_settings
+from app.portfolios.router import market_router, portfolios_router
 
 settings = get_settings()
 
@@ -49,6 +52,8 @@ app.add_middleware(SlowAPIMiddleware)
 # ── Routers ───────────────────────────────────────────────────────────────────
 
 app.include_router(auth_router, prefix="/auth")
+app.include_router(portfolios_router, prefix="/portfolios")
+app.include_router(market_router, prefix="/market")
 
 
 # ── Utility endpoints ─────────────────────────────────────────────────────────
