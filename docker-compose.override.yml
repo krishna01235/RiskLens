@@ -43,6 +43,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: builder
     # Override the runner CMD with next dev via a separate dev-mode approach.
     # We bind-mount source and use the node_modules from the image.
     volumes:
