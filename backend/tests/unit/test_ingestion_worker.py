@@ -111,8 +111,11 @@ async def test_ingestion_worker_processes_trades(monkeypatch):
 
     monkeypatch.setattr("workers.ingestion_worker.websockets.connect", MockWebsocketsConnect)
     
-    # We shouldn't hit sleep, but just in case
-    monkeypatch.setattr("workers.ingestion_worker.asyncio.sleep", AsyncMock())
+    # Make sleep raise StopLoopException to break the while loop
+    async def mock_sleep_stop(*args, **kwargs):
+        raise StopLoopException("Stop loop")
+
+    monkeypatch.setattr("workers.ingestion_worker.asyncio.sleep", mock_sleep_stop)
 
     with pytest.raises(StopLoopException):
         await run_ingestion()
