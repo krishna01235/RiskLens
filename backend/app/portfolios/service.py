@@ -22,9 +22,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.portfolios.csv_normalizer import parse_csv_bytes, parse_rows, suggest_mapping
 from app.portfolios.models import Holding, Portfolio
+from app.portfolios.reverse_index_service import update_symbol_index
+from redis.asyncio import Redis
 from app.portfolios.schemas import (
     AddHoldingRequest,
-    ColumnMapping,
     CsvConfirmRequest,
     CsvPreviewResponse,
     DemoMarket,
@@ -86,9 +87,7 @@ async def _get_portfolio_owned(
     Ownership enforcement: the WHERE clause includes user_id so an attacker
     cannot enumerate portfolio IDs to infer another user's holdings.
     """
-    result = await db.execute(
-        select(Portfolio).where(Portfolio.id == portfolio_id)
-    )
+    result = await db.execute(select(Portfolio).where(Portfolio.id == portfolio_id))
     portfolio = result.scalar_one_or_none()
     if portfolio is None:
         raise HTTPException(status_code=404, detail="Portfolio not found.")
@@ -164,6 +163,7 @@ async def get_portfolio(
 
 async def add_holding(
     db: AsyncSession,
+    redis: Redis,
     portfolio_id: uuid.UUID,
     user_id: uuid.UUID,
     req: AddHoldingRequest,
@@ -202,12 +202,14 @@ async def add_holding(
         db.add(holding)
 
     await db.commit()
+    await update_symbol_index(db, redis, symbol, portfolio_id, 1)
     await db.refresh(holding)
     return holding
 
 
 async def delete_holding(
     db: AsyncSession,
+    redis: Redis,
     portfolio_id: uuid.UUID,
     holding_id: uuid.UUID,
     user_id: uuid.UUID,
@@ -226,8 +228,10 @@ async def delete_holding(
     if holding is None:
         raise HTTPException(status_code=404, detail="Holding not found.")
 
+    symbol = holding.symbol
     await db.delete(holding)
     await db.commit()
+    await update_symbol_index(db, redis, symbol, portfolio_id, -1)
 
 
 def preview_csv(csv_bytes: bytes) -> CsvPreviewResponse:
@@ -253,6 +257,7 @@ def preview_csv(csv_bytes: bytes) -> CsvPreviewResponse:
 
 async def confirm_csv_import(
     db: AsyncSession,
+    redis: Redis,
     user_id: uuid.UUID,
     req: CsvConfirmRequest,
 ) -> Portfolio:
@@ -293,5 +298,7 @@ async def confirm_csv_import(
         )
 
     await db.commit()
+    for hr in holding_requests:
+        await update_symbol_index(db, redis, hr.symbol, portfolio.id, 1)
     await db.refresh(portfolio, ["holdings"])
     return portfolio

@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_current_user, get_redis
+from redis.asyncio import Redis
 from app.portfolios import service
 from app.portfolios.schemas import (
     AddHoldingRequest,
@@ -78,13 +79,14 @@ async def csv_preview(
 async def csv_confirm(
     req: CsvConfirmRequest,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    redis: Redis = Depends(get_redis),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> PortfolioOut:
     """Confirm the mapping and import all rows as a new portfolio.
 
     Returns 422 with per-row details if any row fails validation.
     """
-    portfolio = await service.confirm_csv_import(db, current_user.id, req)
+    portfolio = await service.confirm_csv_import(db, redis, current_user.id, req)
     return PortfolioOut.model_validate(portfolio)
 
 
@@ -100,6 +102,7 @@ async def add_holding(
     portfolio_id: uuid.UUID,
     req: AddHoldingRequest,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    redis: Redis = Depends(get_redis),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> HoldingOut:
     """Add or upsert a holding in the user's portfolio.
@@ -107,7 +110,7 @@ async def add_holding(
     If the portfolio already contains the given symbol, updates quantity and
     average_price rather than creating a duplicate.
     """
-    holding = await service.add_holding(db, portfolio_id, current_user.id, req)
+    holding = await service.add_holding(db, redis, portfolio_id, current_user.id, req)
     return HoldingOut.model_validate(holding)
 
 
@@ -119,10 +122,11 @@ async def delete_holding(
     portfolio_id: uuid.UUID,
     holding_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    redis: Redis = Depends(get_redis),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> None:
     """Remove a holding from the user's portfolio."""
-    await service.delete_holding(db, portfolio_id, holding_id, current_user.id)
+    await service.delete_holding(db, redis, portfolio_id, holding_id, current_user.id)
 
 
 # ── /portfolios/{id} ──────────────────────────────────────────────────────────

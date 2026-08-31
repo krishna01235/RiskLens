@@ -18,6 +18,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import User
 from app.auth.service import decode_access_token
 from app.database import get_db
+from app.config import get_settings
+import redis.asyncio as redis
+from collections.abc import AsyncGenerator
+
+settings = get_settings()
+redis_pool = redis.ConnectionPool.from_url(settings.redis_url, decode_responses=True)
+
+async def get_redis() -> AsyncGenerator[redis.Redis, None]:
+    client = redis.Redis.from_pool(redis_pool)
+    try:
+        yield client
+    finally:
+        await client.aclose()
 
 # The token URL is used only to populate the Swagger UI "Authorize" dialog.
 # Actual token issuance happens in /auth/login.
