@@ -19,7 +19,8 @@ from slowapi.util import get_remote_address
 
 from app.auth.router import router as auth_router
 from app.config import get_settings
-from app.portfolios.router import market_router, portfolios_router
+from app.market.router import market_router
+from app.portfolios.router import portfolios_router
 
 settings = get_settings()
 
