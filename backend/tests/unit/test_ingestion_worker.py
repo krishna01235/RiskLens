@@ -24,6 +24,9 @@ async def test_ingestion_worker_reconnect_backoff(monkeypatch, caplog):
     monkeypatch.setenv("FINNHUB_API_KEY", "test_key")
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
 
+    mock_get_subs = AsyncMock(return_value={"AAPL"})
+    monkeypatch.setattr("workers.ingestion_worker.get_initial_subscriptions", mock_get_subs)
+
     # Mock Redis
     mock_redis = AsyncMock()
     mock_redis_from_url = AsyncMock(return_value=mock_redis)
@@ -74,6 +77,9 @@ async def test_ingestion_worker_processes_trades(monkeypatch):
     """Test that the worker parses trades and publishes to Redis."""
     monkeypatch.setenv("FINNHUB_API_KEY", "test_key")
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+
+    mock_get_subs = AsyncMock(return_value={"AAPL", "MSFT"})
+    monkeypatch.setattr("workers.ingestion_worker.get_initial_subscriptions", mock_get_subs)
 
     mock_redis = AsyncMock()
     monkeypatch.setattr("workers.ingestion_worker.Redis.from_url", lambda *a, **kw: mock_redis)
