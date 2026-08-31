@@ -80,19 +80,18 @@ services:
     networks:
       - risklens
 
-  # ── Placeholder worker ────────────────────────────────────────────────────────
-  # Proves the worker container pattern works. Real workers (fast_path_worker,
-  # slow_path_worker, garch_worker, etc.) are added as their phases land.
-  worker:
+  # ── Ingestion worker (Phase 6) ────────────────────────────────────────────────
+  ingestion_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile.worker
-    command: ["python", "-c", "import time, sys; print('placeholder worker running', flush=True); time.sleep(86400)"]
+    command: ["python", "-m", "workers.ingestion_worker"]
     restart: unless-stopped
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-risklens}:${POSTGRES_PASSWORD:-risklens}@postgres:5432/${POSTGRES_DB:-risklens}
       REDIS_URL: redis://redis:6379/0
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
