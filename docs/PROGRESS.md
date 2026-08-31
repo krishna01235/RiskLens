@@ -1,6 +1,6 @@
 # RiskLens Build Progress
 
-## Current Phase: 7 (not started)
+## Current Phase: 8 (not started)
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
 |---|---|---|---|
@@ -10,6 +10,7 @@
 | 4 | ✅ complete | `b824845` | Full auth flow (register/login/refresh/logout); 6 unit tests pass; frontend pages built. |
 | 5 | ✅ complete | `053710e` | Indian market support; CSV normalization; demo/manual endpoints; frontend UI flow. |
 | 6 | ✅ complete | `7bf0a2c` | Finnhub WS ingestion worker; Redis Stream pub; symbol autocomplete endpoint. |
+| 7 | ✅ complete | `5200d2a` | Symbol reverse index; dynamic Finnhub subscriptions; integration tests. |
 
 ---
 
@@ -271,3 +272,37 @@ Market Data Ingestion: Connect to Finnhub / Yahoo Finance to pull historical pri
 
 ### Next Step (Phase 7)
 Phase 7 (Reverse Index).
+
+---
+
+## Phase 7 — Demand-Driven Symbol Reverse Index (COMPLETE)
+
+**Completed:** 2026-09-01
+
+### Commits
+| SHA | Message |
+|---|---|
+| `5966691` | `feat(portfolios): implement symbol reverse index service` |
+| `5200d2a` | `feat(ingestion): subscribe dynamically based on reverse index` |
+
+### Files Created / Modified
+**Backend:**
+- `backend/app/portfolios/reverse_index_service.py` — Atomic updates for `reverse_index:{symbol}` and `subscriber_count:{symbol}` via Redis pipelines; Publishes subscribe/unsubscribe actions to `market:control`.
+- `backend/app/portfolios/service.py` — Integrated `update_symbol_index` when creating/deleting holdings or demo portfolios.
+- `backend/app/deps.py` — Added `get_redis` generator.
+- `backend/app/portfolios/router.py` — Injected `Redis` dependency where necessary.
+- `backend/workers/ingestion_worker.py` — Subscribes to `market:control` via Pub/Sub, dynamically updates its internal subscriptions, reads initial state from `symbol_subscriptions` DB on startup.
+- `backend/tests/unit/test_reverse_index_service.py` — Unit tests for pipeline atomicity and transition behavior.
+- `backend/tests/unit/test_ingestion_worker.py` — Updated mock tests to simulate dynamic state management.
+- `backend/tests/integration/test_reverse_index.py` — Integration test for end-to-end pub/sub flow and DB audit syncing.
+
+### Acceptance Criteria
+1. The `ingestion_worker` loads required symbols from `symbol_subscriptions` on startup. — **PASS**
+2. Portfolio holding creation triggers atomic Redis reverse index update (SADD + SCARD in pipeline). — **PASS**
+3. Counter transition 0 -> 1 publishes a `subscribe` command to `market:control`. — **PASS**
+4. Counter transition 1 -> 0 publishes an `unsubscribe` command to `market:control`. — **PASS**
+5. DB `symbol_subscriptions` row is updated via async merge pattern. — **PASS**
+6. Integration tests verify the Redis Pub/Sub commands land successfully. — **PASS**
+
+### Next Step (Phase 8)
+Risk Aggregator Fast-Path: Develop the pipeline processing high-frequency ticks into portfolio-level metrics using the reverse index.
