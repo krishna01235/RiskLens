@@ -1,6 +1,6 @@
 # RiskLens Build Progress
 
-## Current Phase: 8 (not started)
+## Current Phase: 9 (not started)
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
 |---|---|---|---|
@@ -11,6 +11,38 @@
 | 5 | ✅ complete | `053710e` | Indian market support; CSV normalization; demo/manual endpoints; frontend UI flow. |
 | 6 | ✅ complete | `7bf0a2c` | Finnhub WS ingestion worker; Redis Stream pub; symbol autocomplete endpoint. |
 | 7 | ✅ complete | `5200d2a` | Symbol reverse index; dynamic Finnhub subscriptions; integration tests. |
+| 8 | ✅ complete | `4d436ad` | Core Quant Engine with 100% unit test coverage. |
+
+---
+
+## Phase 8 — Core Quant Engine (COMPLETE)
+
+**Completed:** 2026-09-01
+
+### Commits
+- `e8ed22e` feat(quant): implement return series utilities
+- `c1b6408` feat(quant): implement Ledoit-Wolf covariance estimation
+- `716fe54` feat(quant): implement core risk metrics (VaR, CVaR, Sharpe, drawdown, risk contribution)
+- `de70aae` test(quant): add comprehensive unit coverage for risk metrics
+- `4d436ad` test(quant): add fallback edge case tests to reach 100% coverage
+
+### Files Created
+**Backend:**
+- `backend/quant/__init__.py`
+- `backend/quant/returns.py`
+- `backend/quant/covariance.py`
+- `backend/quant/risk_metrics.py`
+- `backend/tests/unit/test_quant_returns.py`
+- `backend/tests/unit/test_quant_covariance.py`
+- `backend/tests/unit/test_quant_risk_metrics.py`
+
+### Acceptance Criteria
+1. All quant functions produce numerically correct results against hand-computed reference values — **PASS**
+2. 100% unit test coverage for `quant/` package — **PASS** (verified via pytest-cov)
+3. Zero I/O dependencies inside `quant/` — **PASS**
+
+### Next Step (Phase 9)
+The Portfolio Worker (Slow Path).
 
 ---
 
@@ -305,4 +337,35 @@ Phase 7 (Reverse Index).
 6. Integration tests verify the Redis Pub/Sub commands land successfully. — **PASS**
 
 ### Next Step (Phase 8)
-Risk Aggregator Fast-Path: Develop the pipeline processing high-frequency ticks into portfolio-level metrics using the reverse index.
+Risk Aggregator Fast-Path: Develop the pipeline processing high-frequency ticks into portfolio-level metrics using the reverse index.# #   P h a s e   8      C o r e   Q u a n t   E n g i n e   ( C O M P L E T E ) 
+ 
+ * * C o m p l e t e d : * *   
+ 
+ # # #   C o m m i t s 
+ -   f e a t ( q u a n t ) :   i m p l e m e n t   r e t u r n   s e r i e s   u t i l i t i e s 
+ -   f e a t ( q u a n t ) :   i m p l e m e n t   L e d o i t - W o l f   c o v a r i a n c e   e s t i m a t i o n 
+ -   f e a t ( q u a n t ) :   i m p l e m e n t   c o r e   r i s k   m e t r i c s   ( V a R ,   C V a R ,   S h a r p e ,   d r a w d o w n ,   r i s k   c o n t r i b u t i o n ) 
+ -   t e s t ( q u a n t ) :   a d d   c o m p r e h e n s i v e   u n i t   c o v e r a g e   f o r   r i s k   m e t r i c s 
+ -   t e s t ( q u a n t ) :   a d d   f a l l b a c k   e d g e   c a s e   t e s t s   t o   r e a c h   1 0 0 %   c o v e r a g e 
+ 
+ # # #   F i l e s   C r e a t e d 
+ * * B a c k e n d : * * 
+ -   \  a c k e n d / q u a n t / _ _ i n i t _ _ . p y \ 
+ -   \  a c k e n d / q u a n t / r e t u r n s . p y \ 
+ -   \  a c k e n d / q u a n t / c o v a r i a n c e . p y \ 
+ -   \  a c k e n d / q u a n t / r i s k _ m e t r i c s . p y \ 
+ -   \  a c k e n d / t e s t s / u n i t / t e s t _ q u a n t _ r e t u r n s . p y \ 
+ -   \  a c k e n d / t e s t s / u n i t / t e s t _ q u a n t _ c o v a r i a n c e . p y \ 
+ -   \  a c k e n d / t e s t s / u n i t / t e s t _ q u a n t _ r i s k _ m e t r i c s . p y \ 
+ 
+ # # #   A c c e p t a n c e   C r i t e r i a 
+ 1 .   A l l   q u a n t   f u n c t i o n s   p r o d u c e   n u m e r i c a l l y   c o r r e c t   r e s u l t s   a g a i n s t   h a n d - c o m p u t e d   r e f e r e n c e   v a l u e s      * * P A S S * * 
+ 2 .   1 0 0 %   u n i t   t e s t   c o v e r a g e   f o r   \ q u a n t / \   p a c k a g e      * * P A S S * *   ( v e r i f i e d   v i a   p y t e s t - c o v ) 
+ 3 .   Z e r o   I / O   d e p e n d e n c i e s   i n s i d e   \ q u a n t / \      * * P A S S * * 
+ 
+ # # #   N e x t   S t e p   ( P h a s e   9 ) 
+ T h e   P o r t f o l i o   W o r k e r   ( S l o w   P a t h ) . 
+ 
+ - - - 
+  
+ 
