@@ -150,6 +150,15 @@ async def create_demo_portfolio(
     return portfolio
 
 
+async def get_user_portfolios(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> list[Portfolio]:
+    """Return all portfolios owned by the user."""
+    result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
+    return list(result.scalars().all())
+
+
 async def get_portfolio(
     db: AsyncSession,
     portfolio_id: uuid.UUID,

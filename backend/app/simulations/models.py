@@ -1,9 +1,9 @@
 """simulations/models.py -- ORM model: simulations."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 
-from sqlalchemy import ForeignKey, Index, Integer, Text
+from sqlalchemy import ForeignKey, Index, Integer, Text, DateTime
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,7 +30,7 @@ class Simulation(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
     results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="simulations")  # type: ignore[name-defined]

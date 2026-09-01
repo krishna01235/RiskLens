@@ -1,9 +1,9 @@
 """ai/models.py -- ORM models: ai_conversations, ai_messages."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 
-from sqlalchemy import ForeignKey, Text
+from sqlalchemy import ForeignKey, Text, DateTime
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,7 +21,7 @@ class AiConversation(Base):
         ForeignKey("portfolios.id", ondelete="CASCADE"),
         nullable=False,
     )
-    started_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="ai_conversations")  # type: ignore[name-defined]
     messages: Mapped[list["AiMessage"]] = relationship(
@@ -44,6 +44,6 @@ class AiMessage(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     # present only for what-if messages
     structured_scenario: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     conversation: Mapped["AiConversation"] = relationship(back_populates="messages")

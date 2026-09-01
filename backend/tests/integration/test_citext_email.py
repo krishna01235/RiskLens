@@ -1,4 +1,4 @@
-﻿"""tests/integration/test_citext_email.py
+"""tests/integration/test_citext_email.py
 
 Verify that users.email is CITEXT: two emails differing only in case must
 conflict on insert (i.e. the unique constraint is case-insensitive).
@@ -10,18 +10,11 @@ import pytest
 import asyncpg
 
 
-@pytest.fixture(scope="module")
-def db_url() -> str:
-    url = os.environ.get("DATABASE_URL", "")
-    if not url:
-        pytest.skip("DATABASE_URL not set; skipping integration test")
-    return url.replace("postgresql+asyncpg://", "postgresql://")
-
-
 @pytest.mark.asyncio
 async def test_email_citext_unique_conflict(db_url: str) -> None:
     """Inserting the same email in different cases must raise a UniqueViolationError."""
-    conn = await asyncpg.connect(db_url)
+    asyncpg_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+    conn = await asyncpg.connect(asyncpg_url)
     uid1 = uuid.uuid4()
     uid2 = uuid.uuid4()
     try:

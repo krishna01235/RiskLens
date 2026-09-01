@@ -37,10 +37,15 @@ async_session_factory = async_sessionmaker(
 
 
 # -- Declarative Base ---------------------------------------------------------
+import datetime
+from sqlalchemy import DateTime
+
 class Base(DeclarativeBase):
     """Shared base class for all SQLAlchemy ORM models."""
 
-    pass
+    type_annotation_map = {
+        datetime.datetime: DateTime(timezone=True)
+    }
 
 
 # -- FastAPI dependency -------------------------------------------------------

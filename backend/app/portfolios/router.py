@@ -129,6 +129,19 @@ async def delete_holding(
     await service.delete_holding(db, redis, portfolio_id, holding_id, current_user.id)
 
 
+# ── /portfolios ─────────────────────────────────────────────────────────────────
+
+
+@portfolios_router.get("", response_model=list[PortfolioOut])
+async def list_portfolios(
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
+) -> list[PortfolioOut]:
+    """Return all portfolios for the current user."""
+    portfolios = await service.get_user_portfolios(db, current_user.id)
+    return [PortfolioOut.model_validate(p) for p in portfolios]
+
+
 # ── /portfolios/{id} ──────────────────────────────────────────────────────────
 
 

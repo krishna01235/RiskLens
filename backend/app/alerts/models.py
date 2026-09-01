@@ -1,9 +1,9 @@
 """alerts/models.py -- ORM models: alerts, decisions."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 
-from sqlalchemy import ForeignKey, Index, Text
+from sqlalchemy import ForeignKey, Index, Text, DateTime
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,8 +31,8 @@ class Alert(Base):
     )
     from_state: Mapped[str] = mapped_column(Text, nullable=False)
     to_state: Mapped[str] = mapped_column(Text, nullable=False)
-    fired_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    dismissed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    fired_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="alerts")  # type: ignore[name-defined]
     risk_snapshot: Mapped["RiskSnapshot"] = relationship(back_populates="alerts")  # type: ignore[name-defined]
@@ -54,6 +54,6 @@ class Decision(Base):
     )
     # [{label, expected_return, cvar, p_loss}, ...]
     candidates: Mapped[list] = mapped_column(JSONB, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     alert: Mapped["Alert"] = relationship(back_populates="decisions")

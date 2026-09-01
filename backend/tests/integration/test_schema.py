@@ -1,4 +1,4 @@
-﻿"""tests/integration/test_schema.py
+"""tests/integration/test_schema.py
 
 Assert that every §8.2 table exists in the database after migration.
 
@@ -33,19 +33,11 @@ EXPECTED_TABLES = {
 }
 
 
-@pytest.fixture(scope="module")
-def db_url() -> str:
-    url = os.environ.get("DATABASE_URL", "")
-    if not url:
-        pytest.skip("DATABASE_URL not set; skipping integration test")
-    # asyncpg uses postgresql:// not postgresql+asyncpg://
-    return url.replace("postgresql+asyncpg://", "postgresql://")
-
-
 @pytest.mark.asyncio
 async def test_all_tables_exist(db_url: str) -> None:
     """Query information_schema.tables and assert all expected tables are present."""
-    conn = await asyncpg.connect(db_url)
+    asyncpg_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+    conn = await asyncpg.connect(asyncpg_url)
     try:
         rows = await conn.fetch(
             """

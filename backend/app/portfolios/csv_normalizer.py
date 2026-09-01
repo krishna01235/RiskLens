@@ -23,34 +23,62 @@ from app.portfolios.schemas import AddHoldingRequest, ColumnMapping
 CANONICAL_FIELDS: dict[str, list[str]] = {
     "symbol": [
         # Generic
-        "symbol", "ticker", "stock", "isin", "scrip", "security", "name",
+        "symbol",
+        "ticker",
+        "stock",
+        "isin",
+        "scrip",
+        "security",
+        "name",
         # US brokers
-        "instrument", "financial instrument", "description",
+        "instrument",
+        "financial instrument",
+        "description",
         # Indian brokers — Zerodha / Angel One
-        "trading symbol", "tradingsymbol",
+        "trading symbol",
+        "tradingsymbol",
         # Indian brokers — Groww
         "stock name",
     ],
     "quantity": [
-        "quantity", "qty", "shares", "units", "amount", "position",
-        "no. of shares", "no of shares", "no.of shares",
-        "holdings qty", "net qty",
+        "quantity",
+        "qty",
+        "shares",
+        "units",
+        "amount",
+        "position",
+        "no. of shares",
+        "no of shares",
+        "no.of shares",
+        "holdings qty",
+        "net qty",
     ],
-    "average_price": [
+    "price": [
         # Generic
-        "price", "avg price", "average price", "average cost",
-        "unit cost", "book value",
+        "price",
+        "avg price",
+        "average price",
+        "average cost",
+        "unit cost",
+        "book value",
         # US brokers
-        "avg cost", "cost price", "cost basis",
+        "avg cost",
+        "cost price",
+        "cost basis",
         # Indian brokers — Zerodha
-        "avg. cost", "average buying price",
+        "avg. cost",
+        "average buying price",
         # Indian brokers — Groww
-        "avg. buying price", "avg buying price",
+        "avg. buying price",
+        "avg buying price",
         # Indian brokers — Angel One
         "buy avg price",
     ],
     "currency": [
-        "currency", "ccy", "curr", "cur",
+        "currency",
+        "ccy",
+        "curr",
+        "cur",
     ],
 }
 
@@ -94,7 +122,9 @@ def suggest_mapping(headers: list[str]) -> ColumnMapping:
                     best_score = score
                     best_original = headers[idx]
 
-        result[f"{field}_col"] = best_original if best_score >= _FUZZY_THRESHOLD else None
+        result[f"{field}_col"] = (
+            best_original if best_score >= _FUZZY_THRESHOLD else None
+        )
 
     return ColumnMapping(**result)
 
@@ -141,7 +171,9 @@ def parse_rows(
     if mapping.quantity_col is None:
         raise ValueError("Column mapping for 'quantity' is required before importing.")
     if mapping.price_col is None:
-        raise ValueError("Column mapping for 'average_price' is required before importing.")
+        raise ValueError(
+            "Column mapping for 'average_price' is required before importing."
+        )
 
     results: list[AddHoldingRequest] = []
 
