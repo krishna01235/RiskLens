@@ -18,7 +18,6 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-
 # ── Data containers ────────────────────────────────────────────────────────────
 
 
@@ -145,9 +144,7 @@ def compute_portfolio_returns(
     """
     missing = set(weights) - set(asset_returns.values.columns)
     if missing:
-        raise ValueError(
-            f"Symbols in weights not found in asset_returns: {missing!r}."
-        )
+        raise ValueError(f"Symbols in weights not found in asset_returns: {missing!r}.")
 
     w_series = pd.Series(weights, dtype=float)
     # Align columns to weight order then dot-product
