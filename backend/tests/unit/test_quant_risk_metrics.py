@@ -154,6 +154,27 @@ class TestComputeVarCvar:
         np.testing.assert_allclose(var, -0.001, rtol=1e-10)
         np.testing.assert_allclose(cvar, -0.001, rtol=1e-10)
 
+    def test_cvar_degenerate_empty_tail(self, monkeypatch):
+        """
+        In standard math, the 5th percentile is ≥ the minimum, so the tail is never
+        empty. However, to test the safety guard `if len(tail) == 0: cvar = var`,
+        we monkeypatch np.percentile to simulate a precision issue where the
+        threshold falls strictly below the minimum element.
+        """
+        r = _normal_returns(50)
+        # Mock np.percentile to return a value larger than -min(r) 
+        # so that -var (which is the actual percentile) is < min(r).
+        original_percentile = np.percentile
+        
+        def mock_percentile(a, q):
+            return original_percentile(a, q) - 100.0  # artificially shift var so -var is way below min
+    
+        monkeypatch.setattr(np, "percentile", mock_percentile)
+    
+        var, cvar = compute_var_cvar(r, confidence=0.95)
+        # The fallback should set cvar = var
+        assert cvar == var
+
     def test_all_negative_returns_var_positive(self):
         """All-negative return series → VaR is a large positive loss."""
         r = pd.Series([-0.05] * 50)
@@ -434,3 +455,19 @@ class TestComputeRiskEstimate:
             sigma_p_daily = np.sqrt(w @ cov_result.matrix @ w)
             rc_sum = sum(rc.rc for rc in result.risk_contributions)
             np.testing.assert_allclose(rc_sum, sigma_p_daily, rtol=1e-9)
+
+    def test_full_estimate_zero_volatility_rc_fallback(self):
+        """
+        If the portfolio volatility is exactly zero, compute_risk_contribution
+        raises ValueError. compute_risk_estimate should catch this and
+        set risk_contributions = [].
+        """
+        r = _normal_returns(50)
+        w = np.array([0.5, 0.5])
+        cov = np.zeros((2, 2))  # Zero volatility matrix
+        
+        result = compute_risk_estimate(r, w, cov, ["A", "B"])
+        # Should not raise, RC list should be empty
+        assert not result.insufficient_data
+        assert result.volatility == 0.0
+        assert result.risk_contributions == []

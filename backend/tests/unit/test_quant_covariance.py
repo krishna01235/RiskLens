@@ -152,6 +152,35 @@ class TestEstimateCovariance:
             cov - np.diag(np.diag(cov)), np.zeros_like(cov)
         )
 
+    def test_fallback_to_diagonal_on_non_psd_output(self, monkeypatch):
+        """
+        If LedoitWolf succeeds but produces a matrix that fails the PSD check
+        (eigenvalue < -TOL), we must fall back to diagonal covariance.
+        """
+        rets = _synthetic_returns(n=60, assets=2)
+        X = rets.to_numpy(dtype=float)
+
+        from sklearn.covariance import LedoitWolf
+        
+        # Original fit method
+        original_fit = LedoitWolf.fit
+
+        def mock_fit(self_instance, X):
+            # Let it fit normally so it creates self_instance.covariance_
+            original_fit(self_instance, X)
+            # Then corrupt the covariance matrix to be non-PSD
+            # A matrix [[1, 2], [2, 1]] has eigenvalues [3, -1], so it's not PSD.
+            self_instance.covariance_ = np.array([[1.0, 2.0], [2.0, 1.0]])
+            return self_instance
+
+        monkeypatch.setattr(LedoitWolf, "fit", mock_fit)
+
+        result = estimate_covariance(rets)
+        assert result.estimator == "diagonal_fallback"
+        # Must be the diagonal of the sample variance
+        expected = np.diag(np.var(X, axis=0, ddof=1))
+        np.testing.assert_array_almost_equal(result.matrix, expected)
+
 
 # ── covariance_to_correlation ──────────────────────────────────────────────────
 
