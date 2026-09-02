@@ -1,6 +1,6 @@
-# RiskLens Build Progress
+ï»¿# RiskLens Build Progress
 
-## Current Phase: 14 (not started)
+## Current Phase: 15 (not started)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -180,7 +180,7 @@ Monte Carlo Simulation Engine.
 ### Next Step (Phase 13)
 Extreme Value Theory (EVT) â€” POT/GPD tail risk estimate added to simulation results.
 
-## Phase 13 — Extreme Value Theory (EVT) (COMPLETE)
+## Phase 13 ï¿½ Extreme Value Theory (EVT) (COMPLETE)
 
 **Completed:** 2026-09-02
 
@@ -196,6 +196,47 @@ Extreme Value Theory (EVT) â€” POT/GPD tail risk estimate added to simulation re
 - rontend/components/simulation/SimulationResults.tsx
 
 ### Acceptance Criteria
-1. EVT gracefully fails and returns valid payload if fewer than 20 tail points are available — **PASS**
-2. job_worker.py re-uses historical return prices for EVT computation — **PASS**
-3. EVT VaR/CVaR payload displayed properly in the frontend — **PASS**
+1. EVT gracefully fails and returns valid payload if fewer than 20 tail points are available ï¿½ **PASS**
+2. job_worker.py re-uses historical return prices for EVT computation ï¿½ **PASS**
+3. EVT VaR/CVaR payload displayed properly in the frontend ï¿½ **PASS**
+
+---
+
+## Phase 14 - Risk Budget & Real-Time Alerting (COMPLETE)
+
+**Completed:** 2026-09-03
+
+### Commits
+- `83d41fe` feat(alerts): implement SAFE/WATCH/HIGH/BREACH state machine with hysteresis and anti-oscillation
+- `9933fde` feat(alerts): implement risk budget API and alerts endpoint
+- `350c5b4` feat(alerts): integrate alert state machine into slow-path recompute
+- `b97a4e6` test(alerts): add state-transition and anti-oscillation coverage
+- `c7f4d8b` feat(ui): build risk budget bar, alert banner, and budget settings modal
+
+### Files Created / Modified
+**Backend:**
+- `backend/app/alerts/__init__.py`
+- `backend/app/alerts/state_machine.py`
+- `backend/app/alerts/schemas.py`
+- `backend/app/alerts/service.py`
+- `backend/app/alerts/router.py`
+- `backend/app/main.py`
+- `backend/workers/slow_path_worker.py`
+- `backend/tests/unit/test_state_machine.py`
+- `backend/tests/integration/test_alerts_lifecycle.py`
+
+**Frontend:**
+- `frontend/components/dashboard/RiskBudgetBar.tsx`
+- `frontend/components/dashboard/AlertBanner.tsx`
+- `frontend/components/settings/RiskBudgetModal.tsx`
+- `frontend/app/dashboard/page.tsx`
+- `frontend/hooks/useRiskSocket.ts`
+
+### Acceptance Criteria
+1. Setting a deliberately low budget on the demo portfolio results in a genuine BREACH alert firing in-browser without a page refresh - **PASS** (AlertBanner pops up via WS)
+2. Exactly one alert per transition, not repeated while state is unchanged - **PASS** (Tested via test_state_machine and test_alerts_lifecycle)
+3. Minimum-time-between-alerts guard tested with adversarial sequence - **PASS** (Covered by TestAdversarialBoundaryHovering)
+4. BREACH banner persists until manually dismissed; non-BREACH toast auto-dismisses after 5s - **PASS** (Implemented in AlertBanner timeout)
+
+### Next Step (Phase 15)
+Hidden Correlation / Concentration Detector.
