@@ -1,4 +1,4 @@
-﻿"""
+"""
 tests/unit/test_state_machine.py -- Unit tests for app/alerts/state_machine.py
 
 All tests are pure-function checks (no DB, no Redis, no network).
@@ -160,18 +160,22 @@ class TestAdversarialBoundaryHovering:
       - Recovery below hysteresis: one alert (BREACH -> HIGH)
     """
 
-    def test_boundary_hovering_fires_exactly_twice(self):
+    def test_boundary_hovering_fires_exactly_four_times(self):
         """
-        Tick sequence (utilization, expected state after hysteresis):
-          0.99 (from SAFE) -> WATCH ... -> HIGH -> ... -> BREACH (1 alert)
-          oscillate 0.99-1.01 while in BREACH -> stays BREACH (0 alerts)
-          drop to 0.94 -> HIGH (1 alert = recovery)
+        Tick sequence (utilization -> expected state):
+          0.50 -> SAFE
+          0.65 -> WATCH   (alert 1: SAFE->WATCH)
+          0.82 -> HIGH    (alert 2: WATCH->HIGH)
+          1.01 -> BREACH  (alert 3: HIGH->BREACH)
+          0.99, 1.01, 0.99, 1.01 -> BREACH (hysteresis: stays BREACH, 0 alerts)
+          0.94 -> HIGH    (alert 4: BREACH->HIGH, exits hysteresis band)
 
-        Total: 2 alerts (enter BREACH, exit BREACH)
+        Total: 4 alerts (one per genuine state transition).
+        Hovering ticks inside [0.95, 1.00) while prev=BREACH must NOT fire any alert.
         """
         ticks = [0.50, 0.65, 0.82, 1.01,  # SAFE, WATCH, HIGH, BREACH
-                 0.99, 1.01, 0.99, 1.01,   # hovering in hysteresis band
-                 0.94]                       # exits BREACH -> HIGH
+                 0.99, 1.01, 0.99, 1.01,   # hovering in hysteresis band -> stays BREACH
+                 0.94]                      # exits BREACH -> HIGH
 
         prev_state: AlertState | None = None
         # Fix last_alert_at to a long time ago to isolate the hysteresis logic
@@ -187,14 +191,14 @@ class TestAdversarialBoundaryHovering:
                 last_alert_at = datetime.now(UTC)
             prev_state = new_state
 
-        # Exactly: SAFE->WATCH, WATCH->HIGH, HIGH->BREACH, (hovering=0), BREACH->HIGH
+        # Four genuine transitions; hovering ticks produce zero additional alerts
         assert alert_count == 4, f"Expected 4 alerts, got {alert_count}. States: {states}"
 
-        # Hovering ticks (indices 4-7) must ALL be BREACH
+        # Hovering ticks (indices 4-7) must ALL be BREACH (hysteresis holding)
         for i in range(4, 8):
             assert states[i] == "BREACH", f"tick {i}: expected BREACH got {states[i]}"
 
-        # Recovery tick (index 8) must be HIGH
+        # Recovery tick (index 8) must be HIGH (dropped below breach - hysteresis)
         assert states[8] == "HIGH"
 
     def test_single_spike_and_recovery_fires_exactly_twice(self):

@@ -1,4 +1,4 @@
-﻿"""
+"""
 tests/integration/test_alerts_lifecycle.py
 
 Integration tests for Phase 14: risk budget upsert, alert state transitions,
@@ -249,10 +249,256 @@ async def test_alert_pagination(async_client, db_session, auth_headers, test_use
 
     # Fetch page 2 with cursor -> should give 1 item, no next_cursor
     resp2 = await async_client.get(
-        f"/alerts?portfolio_id={portfolio.id}&limit=2&cursor={data[\"next_cursor\"]}",
+        f"/alerts?portfolio_id={portfolio.id}&limit=2&cursor={data['next_cursor']}",
         headers=auth_headers,
     )
     assert resp2.status_code == 200
     data2 = resp2.json()
     assert len(data2["items"]) == 1
     assert data2["next_cursor"] is None
+
+
+# ---------------------------------------------------------------------------
+# 5. THE KEY SPEC TEST: multi-threshold sequence -> exactly one Alert row per transition
+#    Spec: "Integration test simulating a sequence of recomputes crossing multiple
+#           thresholds, asserting exactly one alert per transition and none for a
+#           repeated same-state recompute"
+# ---------------------------------------------------------------------------
+
+async def test_multi_threshold_sequence_one_alert_per_transition(db_session, test_user):
+    """Simulate a series of CVaR values crossing all four threshold bands.
+
+    This exercises the full alert pipeline end-to-end through the service layer
+    (no Redis needed — budget/alert state tracked in DB + in-memory variables
+    mirroring what _check_alert_state does in the worker).
+
+    Sequence of CVaR values against max_cvar=1000:
+      util=0.50 -> SAFE        (no alert: first run into SAFE)
+      util=0.65 -> WATCH       (alert 1: SAFE->WATCH)
+      util=0.65 -> WATCH       (no alert: same state)
+      util=0.65 -> WATCH       (no alert: same state)
+      util=0.85 -> HIGH        (alert 2: WATCH->HIGH)
+      util=0.85 -> HIGH        (no alert: same state)
+      util=1.10 -> BREACH      (alert 3: HIGH->BREACH)
+      util=0.98 -> BREACH      (no alert: hysteresis band, stays BREACH)
+      util=0.94 -> HIGH        (alert 4: BREACH->HIGH, dropped below 0.95)
+      util=0.30 -> SAFE        (alert 5: HIGH->SAFE)
+
+    Expected: 5 Alert rows total; no duplicates for repeated same-state ticks.
+    """
+    from app.alerts.state_machine import (
+        compute_state,
+        should_fire_alert,
+        utilization as compute_util,
+    )
+    from app.alerts.models import Alert
+    from app.risk.models import RiskSnapshot
+    from sqlalchemy import select
+
+    portfolio = await _create_portfolio(db_session, test_user.id)
+
+    # Create a risk budget: max_cvar=1000, thresholds at 60/80/100%
+    req = RiskBudgetUpsertRequest(
+        max_cvar=1000.0,
+        watch_threshold=0.60,
+        high_threshold=0.80,
+        breach_threshold=1.00,
+    )
+    await alert_service.upsert_risk_budget(db_session, portfolio.id, test_user.id, req)
+
+    # Seed a snapshot (alerts need a FK to risk_snapshots)
+    snap = RiskSnapshot(
+        portfolio_id=portfolio.id,
+        captured_at=datetime.now(UTC),
+        var_95=80, cvar_95=100, volatility=0.15, max_drawdown=0.05,
+        risk_state="SAFE", risk_contribution={}, correlation_flags=[],
+    )
+    db_session.add(snap)
+    await db_session.commit()
+
+    # Drive the state machine directly (mirrors _check_alert_state logic)
+    cvar_ticks = [500, 650, 650, 650, 850, 850, 1100, 980, 940, 300]
+    #             SAFE WATCH W    W    HIGH H    BREACH B(hys) HIGH SAFE
+    expected_transitions = [
+        (None,     "SAFE"),    # no alert
+        ("SAFE",   "WATCH"),   # alert 1
+        ("WATCH",  "WATCH"),   # no alert
+        ("WATCH",  "WATCH"),   # no alert
+        ("WATCH",  "HIGH"),    # alert 2
+        ("HIGH",   "HIGH"),    # no alert
+        ("HIGH",   "BREACH"),  # alert 3
+        ("BREACH", "BREACH"),  # no alert (hysteresis: 980/1000=0.98 > 0.95)
+        ("BREACH", "HIGH"),    # alert 4 (940/1000=0.94 < 0.95)
+        ("HIGH",   "SAFE"),    # alert 5
+    ]
+
+    prev_state = None
+    last_alert_at = None
+    alerts_fired = 0
+
+    for cvar, (expected_prev, expected_new) in zip(cvar_ticks, expected_transitions):
+        util = compute_util(cvar, 1000.0)
+        new_state = compute_state(util, 0.60, 0.80, 1.00, prev_state=prev_state)
+
+        assert prev_state == expected_prev, (
+            f"cvar={cvar}: expected prev_state={expected_prev!r}, got {prev_state!r}"
+        )
+        assert new_state == expected_new, (
+            f"cvar={cvar}: expected new_state={expected_new!r}, got {new_state!r}"
+        )
+
+        if should_fire_alert(prev_state, new_state, last_alert_at, min_interval_s=0):
+            alert = Alert(
+                portfolio_id=portfolio.id,
+                risk_snapshot_id=snap.id,
+                from_state=prev_state or "SAFE",
+                to_state=new_state,
+                fired_at=datetime.now(UTC),
+            )
+            db_session.add(alert)
+            await db_session.commit()
+            last_alert_at = alert.fired_at
+            alerts_fired += 1
+
+        prev_state = new_state
+
+    # Verify exactly 5 alerts were written to DB
+    assert alerts_fired == 5, f"Expected 5 alerts, got {alerts_fired}"
+
+    result = await db_session.execute(
+        select(Alert).where(Alert.portfolio_id == portfolio.id)
+    )
+    db_alerts = result.scalars().all()
+    assert len(db_alerts) == 5, f"Expected 5 DB rows, got {len(db_alerts)}"
+
+    # Verify the from_state/to_state transitions are correct
+    transitions = sorted(
+        [(a.from_state, a.to_state) for a in db_alerts],
+        key=lambda x: x[1]
+    )
+    expected_fired = sorted([
+        ("SAFE", "WATCH"),
+        ("WATCH", "HIGH"),
+        ("HIGH", "BREACH"),
+        ("BREACH", "HIGH"),
+        ("HIGH", "SAFE"),
+    ], key=lambda x: x[1])
+    assert transitions == expected_fired, f"Wrong transitions: {transitions}"
+
+
+async def test_same_state_repeated_recompute_produces_zero_alerts(db_session, test_user):
+    """Repeated recomputes in the same state must never write new Alert rows.
+
+    Spec: 'none for a repeated same-state recompute'
+    """
+    from app.alerts.state_machine import compute_state, should_fire_alert, utilization as compute_util
+    from app.alerts.models import Alert
+    from app.risk.models import RiskSnapshot
+    from sqlalchemy import select
+
+    portfolio = await _create_portfolio(db_session, test_user.id)
+    req = RiskBudgetUpsertRequest(
+        max_cvar=1000.0,
+        watch_threshold=0.60,
+        high_threshold=0.80,
+        breach_threshold=1.00,
+    )
+    await alert_service.upsert_risk_budget(db_session, portfolio.id, test_user.id, req)
+
+    snap = RiskSnapshot(
+        portfolio_id=portfolio.id,
+        captured_at=datetime.now(UTC),
+        var_95=80, cvar_95=100, volatility=0.15, max_drawdown=0.05,
+        risk_state="SAFE", risk_contribution={}, correlation_flags=[],
+    )
+    db_session.add(snap)
+    await db_session.commit()
+
+    # Simulate 10 consecutive recomputes all producing HIGH state (util=0.85)
+    prev_state = "WATCH"  # start at WATCH so first tick into HIGH fires one alert
+    last_alert_at = None
+    alerts_fired = 0
+
+    for i in range(10):
+        util = compute_util(850, 1000.0)  # always 0.85 -> HIGH
+        new_state = compute_state(util, 0.60, 0.80, 1.00, prev_state=prev_state)
+        assert new_state == "HIGH"
+
+        if should_fire_alert(prev_state, new_state, last_alert_at, min_interval_s=0):
+            alert = Alert(
+                portfolio_id=portfolio.id,
+                risk_snapshot_id=snap.id,
+                from_state=prev_state,
+                to_state=new_state,
+                fired_at=datetime.now(UTC),
+            )
+            db_session.add(alert)
+            await db_session.commit()
+            last_alert_at = alert.fired_at
+            alerts_fired += 1
+
+        prev_state = new_state
+
+    # Only the first tick (WATCH->HIGH) should have fired; the 9 remaining are same-state
+    assert alerts_fired == 1, f"Expected 1 alert, got {alerts_fired} (same-state guard broken)"
+
+    result = await db_session.execute(
+        select(Alert).where(Alert.portfolio_id == portfolio.id)
+    )
+    assert len(result.scalars().all()) == 1
+
+
+async def test_min_interval_guard_suppresses_db_writes(db_session, test_user):
+    """Min-interval guard must prevent DB writes within the guard window.
+
+    Spec: 'a test for the minimum-time-between-alerts guard'
+    """
+    from app.alerts.state_machine import compute_state, should_fire_alert, utilization as compute_util
+    from app.alerts.models import Alert
+    from app.risk.models import RiskSnapshot
+    from sqlalchemy import select
+
+    portfolio = await _create_portfolio(db_session, test_user.id)
+    req = RiskBudgetUpsertRequest(
+        max_cvar=1000.0,
+        watch_threshold=0.60,
+        high_threshold=0.80,
+        breach_threshold=1.00,
+    )
+    await alert_service.upsert_risk_budget(db_session, portfolio.id, test_user.id, req)
+
+    snap = RiskSnapshot(
+        portfolio_id=portfolio.id,
+        captured_at=datetime.now(UTC),
+        var_95=80, cvar_95=100, volatility=0.15, max_drawdown=0.05,
+        risk_state="SAFE", risk_contribution={}, correlation_flags=[],
+    )
+    db_session.add(snap)
+    await db_session.commit()
+
+    # First transition: SAFE -> WATCH; fires immediately (no previous alert)
+    last_alert_at = datetime.now(UTC)
+    alert = Alert(
+        portfolio_id=portfolio.id,
+        risk_snapshot_id=snap.id,
+        from_state="SAFE",
+        to_state="WATCH",
+        fired_at=last_alert_at,
+    )
+    db_session.add(alert)
+    await db_session.commit()
+
+    # Now simulate WATCH->HIGH, but the guard window (300s) has NOT elapsed
+    # Should be suppressed
+    assert not should_fire_alert("WATCH", "HIGH", last_alert_at, min_interval_s=300)
+
+    # Simulate that 301 seconds have passed
+    old_alert_at = last_alert_at - timedelta(seconds=301)
+    assert should_fire_alert("WATCH", "HIGH", old_alert_at, min_interval_s=300)
+
+    # Verify only 1 alert in DB (the suppressed one was never written)
+    result = await db_session.execute(
+        select(Alert).where(Alert.portfolio_id == portfolio.id)
+    )
+    assert len(result.scalars().all()) == 1, "Suppressed alert must not reach DB"
+

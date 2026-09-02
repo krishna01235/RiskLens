@@ -44,14 +44,14 @@ def run_migrations(db_url: str):
     command.upgrade(alembic_cfg, "head")
 
 
-@pytest_asyncio.fixture(loop_scope="function", scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def async_engine(db_url: str):
     engine = create_async_engine(db_url, echo=False)
     yield engine
     await engine.dispose()
 
 
-@pytest_asyncio.fixture(loop_scope="function")
+@pytest_asyncio.fixture()
 async def db_session(async_engine) -> AsyncGenerator[AsyncSession, None]:
     """Provide a clean session that rolls back after each test."""
     async_session = sessionmaker(
@@ -62,7 +62,7 @@ async def db_session(async_engine) -> AsyncGenerator[AsyncSession, None]:
         await session.rollback()
 
 
-@pytest_asyncio.fixture(loop_scope="function")
+@pytest_asyncio.fixture()
 async def async_client(db_session: AsyncSession) -> AsyncGenerator[httpx.AsyncClient, None]:
     """AsyncClient wired to the FastAPI app with the test DB session."""
 
@@ -78,7 +78,7 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[httpx.AsyncCl
     app.dependency_overrides.clear()
 
 
-@pytest_asyncio.fixture(loop_scope="function")
+@pytest_asyncio.fixture()
 async def test_user(db_session: AsyncSession) -> User:
     user = User(email=f"test-{uuid.uuid4().hex[:8]}@example.com", password_hash="fakehash")
     db_session.add(user)
@@ -86,7 +86,7 @@ async def test_user(db_session: AsyncSession) -> User:
     return user
 
 
-@pytest_asyncio.fixture(loop_scope="function")
+@pytest_asyncio.fixture()
 async def other_test_user(db_session: AsyncSession) -> User:
     user = User(email=f"other-{uuid.uuid4().hex[:8]}@example.com", password_hash="fakehash")
     db_session.add(user)
