@@ -1,6 +1,6 @@
 # RiskLens Build Progress
 
-## Current Phase: 13 (not started)
+## Current Phase: 14 (not started)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -179,3 +179,23 @@ Monte Carlo Simulation Engine.
 
 ### Next Step (Phase 13)
 Extreme Value Theory (EVT) â€” POT/GPD tail risk estimate added to simulation results.
+
+## Phase 13 — Extreme Value Theory (EVT) (COMPLETE)
+
+**Completed:** 2026-09-02
+
+### Files Modified
+**Backend:**
+- ackend/quant/evt.py (NEW)
+- ackend/tests/unit/test_evt.py (NEW)
+- ackend/app/simulations/schemas.py
+- ackend/workers/job_worker.py
+
+**Frontend:**
+- rontend/components/simulation/EVTComparisonRow.tsx (NEW)
+- rontend/components/simulation/SimulationResults.tsx
+
+### Acceptance Criteria
+1. EVT gracefully fails and returns valid payload if fewer than 20 tail points are available — **PASS**
+2. job_worker.py re-uses historical return prices for EVT computation — **PASS**
+3. EVT VaR/CVaR payload displayed properly in the frontend — **PASS**
