@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 interface SimResult {
   prob_profit: number;
@@ -8,6 +8,12 @@ interface SimResult {
   pnl_p50: number;
   pnl_p95: number;
   num_paths: number;
+  evt?: {
+    is_valid: boolean;
+    message: string;
+    var_95: number | null;
+    cvar_95: number | null;
+  } | null;
 }
 
 interface Props {
@@ -22,6 +28,8 @@ function fmt(n: number) {
 function pct(n: number) {
   return `${(n * 100).toFixed(1)}%`;
 }
+
+import EVTComparisonRow from "./EVTComparisonRow";
 
 export default function SimulationResults({ result }: Props) {
   const range = result.pnl_p95 - result.pnl_p5;
@@ -76,6 +84,9 @@ export default function SimulationResults({ result }: Props) {
           <span className="text-blue-400">P95: {fmt(result.pnl_p95)}</span>
         </div>
       </div>
+
+      {/* EVT Tail Risk Comparison */}
+      <EVTComparisonRow evt={result.evt} mcVarPnl={result.pnl_p5} />
     </div>
   );
 }

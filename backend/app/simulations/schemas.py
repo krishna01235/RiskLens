@@ -1,4 +1,4 @@
-﻿"""simulations/schemas.py -- Pydantic schemas for the simulations API."""
+"""simulations/schemas.py -- Pydantic schemas for the simulations API."""
 
 from __future__ import annotations
 
@@ -24,6 +24,13 @@ class SimulationCreateRequest(BaseModel):
     )
 
 
+class EVTResultPayload(BaseModel):
+    is_valid: bool
+    message: str
+    var_95: float | None = None
+    cvar_95: float | None = None
+
+
 class SimulationResultPayload(BaseModel):
     """Embedded inside SimulationResponse.results when status=complete."""
 
@@ -34,6 +41,7 @@ class SimulationResultPayload(BaseModel):
     pnl_p50: float
     pnl_p95: float
     num_paths: int
+    evt: EVTResultPayload | None = None
 
 
 class SimulationResponse(BaseModel):
