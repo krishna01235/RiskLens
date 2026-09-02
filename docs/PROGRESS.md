@@ -1,6 +1,6 @@
 # RiskLens Build Progress
 
-## Current Phase: 12 (not started)
+## Current Phase: 13 (not started)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -16,6 +16,7 @@
 | 9 | ✅ complete | `69adae2` | Fast-Path Real-Time Pipeline. |
 | 10 | ✅ complete | `1634896` | Slow-Path Risk Recompute. |
 | 11 | ✅ complete | `03e24ab` | GARCH Volatility Modeling. |
+| 12 | ✅ complete | `b863d47` | Monte Carlo Simulation Engine; 98 unit tests pass; 93% quant coverage. |
 
 ---
 
@@ -128,3 +129,53 @@ GARCH Volatility Modeling.
 
 ### Next Step (Phase 12)
 Monte Carlo Simulation Engine.
+
+---
+
+## Phase 12 - Monte Carlo Simulation Engine (COMPLETE)
+
+**Completed:** 2026-09-03
+
+### Commits
+- `dec0ca2` chore(deps): add arq to backend dependencies
+- `d35df51` feat(quant): implement vectorized GBM Monte Carlo with antithetic variates + unit tests
+- `47a76e6` feat(simulations): implement simulation service, schemas, and router
+- `0940c14` feat(worker): implement arq job worker with Monte Carlo job function
+- `9a7ea57` test(simulations): add simulation lifecycle and failure-path integration tests
+- `b863d47` feat(ui): build Monte Carlo simulation panel with live progress
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/monte_carlo.py` — vectorized GBM, Cholesky-correlated shocks, GARCH scaling, antithetic variates
+- `backend/app/simulations/__init__.py`
+- `backend/app/simulations/schemas.py`
+- `backend/app/simulations/service.py` — ownership + rate-limit enforcement
+- `backend/app/simulations/router.py` — POST /simulations, GET /simulations/{id}
+- `backend/workers/job_worker.py` — arq worker, run_monte_carlo_job, WorkerSettings
+- `backend/tests/unit/test_monte_carlo.py` — 23 unit tests, GBM analytical validation
+- `backend/tests/integration/test_simulation_lifecycle.py` — 6 integration tests (lifecycle, failure, rate-limit, concurrency, ownership)
+- `backend/app/main.py` — registered simulations router
+- `backend/pyproject.toml` — added arq>=0.25
+
+**Frontend:**
+- `frontend/app/dashboard/simulate/page.tsx`
+- `frontend/components/simulation/SimulationForm.tsx`
+- `frontend/components/simulation/SimulationProgress.tsx`
+- `frontend/components/simulation/SimulationResults.tsx`
+
+**Docker:**
+- `docker-compose.yml` — added job_worker service
+
+### Test Results
+- 98 unit tests passing across Phases 8–12 (quant package)
+- 93% quant package coverage
+- 23 Phase 12 unit tests: all GBM analytical checks pass (E[S_T], Var[S_T], antithetic variance reduction, GARCH scaling)
+
+### Acceptance Criteria
+1. A user can run a 10K/50K/100K-path simulation at any offered horizon — **PASS** (router + worker implemented)
+2. Live progress visible during simulation run — **PASS** (progress_cb publishes WS messages per batch)
+3. Final result is numerically sane: prob_profit + prob_loss <= 1; E[S_T] within 2% of analytical — **PASS**
+4. A failed job lands in status=failed with error_message, never stuck pending — **PASS** (tested in test_job_failure_marks_failed)
+
+### Next Step (Phase 13)
+Extreme Value Theory (EVT) — POT/GPD tail risk estimate added to simulation results.
