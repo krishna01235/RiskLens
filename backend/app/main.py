@@ -22,6 +22,7 @@ from app.config import get_settings
 from app.market.router import market_router
 from app.portfolios.router import portfolios_router
 from app.risk.router import risk_router
+from app.alerts.router import alerts_router
 from app.simulations.router import simulations_router
 from app.ws.router import router as ws_router
 
@@ -59,6 +60,7 @@ app.include_router(auth_router, prefix="/auth")
 app.include_router(portfolios_router, prefix="/portfolios")
 app.include_router(market_router, prefix="/market")
 app.include_router(risk_router)
+app.include_router(alerts_router)
 app.include_router(simulations_router)
 app.include_router(ws_router)
 
