@@ -38,6 +38,8 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
+import json
+
 from quant.covariance import InsufficientDataError
 
 MIN_OBSERVATIONS = 20  # shared constant
@@ -280,6 +282,55 @@ def compute_risk_contribution(
             )
         )
     return result
+
+
+def assemble_volatility_vector(
+    cov_matrix: np.ndarray,
+    symbols: list[str],
+    garch_payloads: dict[str, str | None],
+) -> np.ndarray:
+    """
+    Assemble the daily volatility vector for Monte Carlo simulation.
+
+    Reads GARCH volatility from JSON payloads if available and valid.
+    Falls back to the historical standard deviation (sqrt of covariance diagonal)
+    otherwise.
+
+    Parameters
+    ----------
+    cov_matrix:
+        (N, N) daily covariance matrix.
+    symbols:
+        List of asset names.
+    garch_payloads:
+        Dictionary mapping symbol to its JSON payload string from Redis,
+        e.g., '{"volatility": 0.05, "source": "garch", "updated_at": 1690000000.0}'.
+        Values can be None if not found in Redis.
+
+    Returns
+    -------
+    1-D array of daily volatilities aligned with ``symbols``.
+    """
+    vol_vec = np.zeros(len(symbols), dtype=float)
+    hist_vols = np.sqrt(np.maximum(np.diag(cov_matrix), 0.0))
+
+    for i, sym in enumerate(symbols):
+        payload_str = garch_payloads.get(sym)
+        vol = None
+        if payload_str:
+            try:
+                data = json.loads(payload_str)
+                if "volatility" in data:
+                    vol = float(data["volatility"])
+            except (json.JSONDecodeError, ValueError, TypeError):
+                pass
+        
+        if vol is not None:
+            vol_vec[i] = vol
+        else:
+            vol_vec[i] = float(hist_vols[i])
+            
+    return vol_vec
 
 
 def compute_risk_estimate(

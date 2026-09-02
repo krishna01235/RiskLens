@@ -139,6 +139,25 @@ services:
     networks:
       - risklens
 
+  # ── GARCH worker (Phase 11) ───────────────────────────────────────────────────
+  garch_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    command: ["python", "-m", "workers.garch_worker"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-risklens}:${POSTGRES_PASSWORD:-risklens}@postgres:5432/${POSTGRES_DB:-risklens}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - risklens
+
 # ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:
   postgres_data:

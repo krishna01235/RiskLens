@@ -69,3 +69,8 @@ services:
     # Bind-mount source for easy iteration on worker code during development
     volumes:
       - ./backend:/app
+
+  garch_worker:
+    # Bind-mount source for easy iteration on worker code during development
+    volumes:
+      - ./backend:/app
