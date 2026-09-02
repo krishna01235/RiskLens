@@ -158,6 +158,25 @@ services:
     networks:
       - risklens
 
+  # ── Job Worker (arq -- Monte Carlo simulations) ──────────────────────────────
+  job_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    command: ["python", "-m", "arq", "workers.job_worker.WorkerSettings"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-risklens}:${POSTGRES_PASSWORD:-risklens}@postgres:5432/${POSTGRES_DB:-risklens}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - risklens
+
 # ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:
   postgres_data:
