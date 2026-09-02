@@ -1,11 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 
+export interface RiskMetrics {
+  var_95: number;
+  cvar_95: number;
+  volatility: number;
+  sharpe: number | null;
+  max_drawdown: number;
+  n_obs: number;
+}
+
 export interface RiskUpdate {
   portfolio_id: string;
   portfolio_value: string;
   daily_pnl: string;
   timestamp: number;
+  data_status?: "pending" | "ready" | "insufficient_data";
+  metrics?: RiskMetrics | null;
+  risk_contributions?: any[];
+  risk_updated_at?: number;
 }
 
 export function useRiskSocket(portfolioId: string | null) {
@@ -21,6 +34,16 @@ export function useRiskSocket(portfolioId: string | null) {
 
     const connect = async () => {
       try {
+        // Initial REST fetch
+        try {
+          const initialData = await apiClient.get<RiskUpdate>(`/portfolios/${portfolioId}/risk`);
+          if (isMounted && initialData) {
+            setRiskData(initialData);
+          }
+        } catch (e) {
+          console.error("Failed to fetch initial risk data", e);
+        }
+
         const { ticket } = await apiClient.post<{ ticket: string }>("/ws/ticket");
         
         const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";

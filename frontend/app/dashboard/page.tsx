@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
 import { useRiskSocket } from "@/hooks/useRiskSocket";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import MetricCard from "@/components/dashboard/MetricCard";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -89,6 +90,51 @@ export default function DashboardPage() {
               </span>
             </div>
           </div>
+        </div>
+
+        <div className="mt-8 border-t border-slate-800 pt-8">
+          <h2 className="mb-6 text-xl font-semibold tracking-tight">Risk Metrics</h2>
+          
+          {(!riskData || riskData.data_status === "pending") ? (
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-8 text-center text-slate-400">
+              <Loader2 className="mx-auto mb-4 h-6 w-6 animate-spin text-blue-500" />
+              <p>Waiting for market data to compute risk metrics...</p>
+            </div>
+          ) : riskData.data_status === "insufficient_data" ? (
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-8 text-center text-slate-400">
+              <AlertCircle className="mx-auto mb-4 h-6 w-6 text-amber-500" />
+              <p>Insufficient historical data to compute risk metrics.</p>
+              <p className="mt-1 text-sm text-slate-500">More price history is needed for a reliable estimate.</p>
+            </div>
+          ) : riskData.metrics ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricCard 
+                label="95% Value at Risk (VaR)" 
+                value={`$${riskData.metrics.var_95.toFixed(2)}`} 
+                sub="Max expected loss in 95% of days" 
+                accent="negative"
+              />
+              <MetricCard 
+                label="95% Conditional VaR (CVaR)" 
+                value={`$${riskData.metrics.cvar_95.toFixed(2)}`} 
+                sub="Expected loss in worst 5% of days" 
+                accent="negative"
+              />
+              <MetricCard 
+                label="Annualized Volatility" 
+                value={`${(riskData.metrics.volatility * 100).toFixed(2)}%`} 
+              />
+              <MetricCard 
+                label="Max Drawdown" 
+                value={`${(riskData.metrics.max_drawdown * 100).toFixed(2)}%`} 
+              />
+              <MetricCard 
+                label="Sharpe Ratio" 
+                value={riskData.metrics.sharpe !== null ? riskData.metrics.sharpe.toFixed(2) : "N/A"} 
+                accent={riskData.metrics.sharpe !== null && riskData.metrics.sharpe >= 1 ? "positive" : "default"}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-8 flex justify-end">

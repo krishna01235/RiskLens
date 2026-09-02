@@ -64,3 +64,8 @@ services:
     # Bind-mount source for easy iteration on worker code during development
     volumes:
       - ./backend:/app
+
+  slow_path_worker:
+    # Bind-mount source for easy iteration on worker code during development
+    volumes:
+      - ./backend:/app

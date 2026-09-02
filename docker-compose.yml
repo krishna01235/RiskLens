@@ -119,6 +119,26 @@ services:
     networks:
       - risklens
 
+  # ── Slow Path worker (Phase 10) ───────────────────────────────────────────────
+  slow_path_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    command: ["python", "-m", "workers.slow_path_worker"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-risklens}:${POSTGRES_PASSWORD:-risklens}@postgres:5432/${POSTGRES_DB:-risklens}
+      REDIS_URL: redis://redis:6379/0
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - risklens
+
 # ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:
   postgres_data:
