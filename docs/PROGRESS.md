@@ -1,6 +1,6 @@
 # RiskLens Build Progress
 
-## Current Phase: 11 (not started)
+## Current Phase: 12 (not started)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -15,6 +15,7 @@
 | 8 | ✅ complete | `4d436ad` | Core Quant Engine with 100% unit test coverage. |
 | 9 | ✅ complete | `69adae2` | Fast-Path Real-Time Pipeline. |
 | 10 | ✅ complete | `1634896` | Slow-Path Risk Recompute. |
+| 11 | ✅ complete | `03e24ab` | GARCH Volatility Modeling. |
 
 ---
 
@@ -102,3 +103,28 @@ Slow-Path Risk Recompute.
 
 ### Next Step (Phase 11)
 GARCH Volatility Modeling.
+
+
+## Phase 11 — GARCH Volatility Modeling (COMPLETE)
+
+**Completed:** 2026-09-02
+
+### Commits
+- `03e24ab` feat(quant): implement GARCH(1,1) volatility estimation
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/garch.py`
+- `backend/quant/risk_metrics.py`
+- `backend/workers/garch_worker.py`
+- `backend/tests/unit/test_garch.py`
+- `backend/pyproject.toml`
+- `docker-compose.yml`
+- `docker-compose.override.yml`
+
+### Acceptance Criteria
+1. `symbol_volatility:{symbol}` is populated and refreshed on schedule — **PASS**
+2. A symbol with insufficient history correctly falls back without error — **PASS**
+
+### Next Step (Phase 12)
+Monte Carlo Simulation Engine.
