@@ -51,7 +51,9 @@ import app.alerts.models  # noqa: F401
 import app.auth.models  # noqa: F401
 import app.replays.models  # noqa: F401
 import app.simulations.models  # noqa: F401
-from app.portfolios.models import Holding
+from app.alerts.models import Alert
+from app.alerts.state_machine import AlertState, compute_state, should_fire_alert, utilization as compute_utilization
+from app.portfolios.models import Holding, RiskBudget
 from app.risk.models import RiskSnapshot
 from quant.covariance import InsufficientDataError, estimate_covariance
 from quant.returns import (
@@ -372,6 +374,137 @@ async def recompute_portfolio(
 
     logger.info("Recomputed risk for portfolio %s -> %s", portfolio_id, data_status)
 
+    # ── Phase 14: alert state machine ────────────────────────────────────────
+    if estimate is not None:
+        try:
+            await _check_alert_state(db, redis, portfolio_id, estimate.cvar_95)
+        except Exception:
+            logger.exception("Alert state check failed for portfolio %s (isolated)", portfolio_id)
+
+
+# ── Alert state machine integration ───────────────────────────────────────────
+
+_ALERT_STATE_KEY = "alert_state"   # field inside risk_state:{pid} hash
+_LAST_ALERT_KEY = "last_alert_at"  # ISO timestamp of last alert
+_BUDGET_CACHE_KEY = "alert_budget"  # cached budget JSON in risk_state hash
+_BUDGET_CACHE_TTL = 60              # seconds before re-fetching budget from DB
+_BUDGET_CACHE_FETCHED_KEY = "alert_budget_fetched_at"
+
+
+async def _check_alert_state(
+    db: AsyncSession,
+    redis: Redis,
+    portfolio_id: str,
+    cvar_95: float,
+) -> None:
+    """Load risk budget, compute utilization, run state machine, fire alert if needed.
+
+    Budget is cached in the risk_state Redis hash for 60 s to avoid a DB
+    round-trip on every tick.
+    """
+    state_key = f"{_RISK_STATE_PREFIX}{portfolio_id}"
+
+    # Load cached budget (refresh from DB if stale)
+    budget_json = await redis.hget(state_key, _BUDGET_CACHE_KEY)
+    fetched_at_str = await redis.hget(state_key, _BUDGET_CACHE_FETCHED_KEY)
+    now_ts = time.time()
+    cache_stale = (
+        budget_json is None
+        or fetched_at_str is None
+        or (now_ts - float(fetched_at_str)) > _BUDGET_CACHE_TTL
+    )
+
+    if cache_stale:
+        result = await db.execute(
+            select(RiskBudget).where(RiskBudget.portfolio_id == uuid.UUID(portfolio_id))
+        )
+        budget = result.scalar_one_or_none()
+        if budget is None:
+            # No budget configured — nothing to alert on
+            return
+        budget_data = {
+            "max_cvar": float(budget.max_cvar),
+            "watch": float(budget.watch_threshold),
+            "high": float(budget.high_threshold),
+            "breach": float(budget.breach_threshold),
+        }
+        await redis.hset(state_key, _BUDGET_CACHE_KEY, json.dumps(budget_data))
+        await redis.hset(state_key, _BUDGET_CACHE_FETCHED_KEY, str(now_ts))
+    else:
+        budget_data = json.loads(budget_json)  # type: ignore[arg-type]
+
+    # Compute utilization and new state
+    util = compute_utilization(cvar_95, budget_data["max_cvar"])
+
+    prev_state_str = await redis.hget(state_key, _ALERT_STATE_KEY)
+    prev_state: AlertState | None = prev_state_str  # type: ignore[assignment]
+
+    new_state = compute_state(
+        util,
+        watch_threshold=budget_data["watch"],
+        high_threshold=budget_data["high"],
+        breach_threshold=budget_data["breach"],
+        prev_state=prev_state,
+    )
+
+    last_alert_str = await redis.hget(state_key, _LAST_ALERT_KEY)
+    last_alert_at = (
+        datetime.fromisoformat(last_alert_str) if last_alert_str else None
+    )
+
+    if not should_fire_alert(prev_state, new_state, last_alert_at):
+        # Update stored state even if no alert fires (state may have changed silently)
+        await redis.hset(state_key, _ALERT_STATE_KEY, new_state)
+        return
+
+    # Write alert row (linked to the most recent snapshot for this portfolio)
+    from sqlalchemy import select as sa_select
+    from app.risk.models import RiskSnapshot
+    snap_result = await db.execute(
+        sa_select(RiskSnapshot)
+        .where(RiskSnapshot.portfolio_id == uuid.UUID(portfolio_id))
+        .order_by(RiskSnapshot.captured_at.desc())
+        .limit(1)
+    )
+    latest_snapshot = snap_result.scalar_one_or_none()
+
+    alert = Alert(
+        portfolio_id=uuid.UUID(portfolio_id),
+        risk_snapshot_id=(
+            latest_snapshot.id
+            if latest_snapshot is not None
+            else uuid.UUID(int=0)  # sentinel — no snapshot yet
+        ),
+        from_state=prev_state or "SAFE",
+        to_state=new_state,
+        fired_at=datetime.now(UTC),
+    )
+    db.add(alert)
+    await db.commit()
+
+    # Publish WS alert message
+    await redis.publish(
+        f"{_RISK_UPDATES_PREFIX}{portfolio_id}",
+        json.dumps({
+            "type": "alert",
+            "portfolio_id": portfolio_id,
+            "from_state": prev_state or "SAFE",
+            "to_state": new_state,
+            "utilization": round(util, 4),
+            "cvar": round(cvar_95, 2),
+            "fired_at": alert.fired_at.isoformat(),
+        }),
+    )
+
+    # Update Redis state
+    await redis.hset(state_key, _ALERT_STATE_KEY, new_state)
+    await redis.hset(state_key, _LAST_ALERT_KEY, alert.fired_at.isoformat())
+
+    logger.info(
+        "Alert fired for portfolio %s: %s -> %s (util=%.2f)",
+        portfolio_id, prev_state, new_state, util,
+    )
+
 
 # ── Snapshot persistence ──────────────────────────────────────────────────────
 
@@ -381,11 +514,13 @@ async def persist_snapshot(
     portfolio_id: str,
     estimate: RiskEstimate,
     captured_at: datetime,
+    alert_state: str = "SAFE",
 ) -> None:
     """Persist an append-only ``risk_snapshots`` audit row (F5: ~every 5 min).
 
-    Placeholder fields (risk_state, risk_contribution, correlation_flags) are
-    populated for real in Phases 14 and 15 respectively.
+    alert_state is the current SAFE/WATCH/HIGH/BREACH state from the Phase 14
+    state machine, written into the risk_state column for the audit trail.
+    risk_contribution and correlation_flags are populated in Phase 15.
     """
     snapshot = RiskSnapshot(
         portfolio_id=uuid.UUID(portfolio_id),
@@ -399,9 +534,9 @@ async def persist_snapshot(
             if estimate.sharpe is not None
             else None
         ),
-        risk_state="SAFE",  # real state machine lands in Phase 14
-        risk_contribution={},  # populated in Phase 15
-        correlation_flags=[],  # populated in Phase 15
+        risk_state=alert_state,          # Phase 14: real state from state machine
+        risk_contribution={},            # populated in Phase 15
+        correlation_flags=[],            # populated in Phase 15
     )
     db.add(snapshot)
     await db.commit()
@@ -472,8 +607,13 @@ async def _flush_portfolio(
                             ),
                             max_drawdown=float(estimate_data["max_drawdown"]),
                         )
+                        # Read current alert state from Redis for snapshot audit
+                        alert_state = await redis.hget(
+                            f"{_RISK_STATE_PREFIX}{portfolio_id}", _ALERT_STATE_KEY
+                        ) or "SAFE"
                         await persist_snapshot(
-                            db, portfolio_id, estimate, datetime.now(UTC)
+                            db, portfolio_id, estimate, datetime.now(UTC),
+                            alert_state=alert_state,
                         )
                         last_snapshot_at[portfolio_id] = now
             except Exception:
