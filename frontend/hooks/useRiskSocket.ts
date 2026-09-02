@@ -10,6 +10,16 @@ export interface RiskMetrics {
   n_obs: number;
 }
 
+export interface AlertMessage {
+  type: "alert";
+  portfolio_id: string;
+  from_state: string;
+  to_state: string;
+  utilization: number;
+  cvar: number;
+  fired_at: string;
+}
+
 export interface RiskUpdate {
   portfolio_id: string;
   portfolio_value: string;
@@ -23,6 +33,7 @@ export interface RiskUpdate {
 
 export function useRiskSocket(portfolioId: string | null) {
   const [riskData, setRiskData] = useState<RiskUpdate | null>(null);
+  const [alertMsg, setAlertMsg] = useState<AlertMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ws = useRef<WebSocket | null>(null);
 
@@ -67,6 +78,8 @@ export function useRiskSocket(portfolioId: string | null) {
             const data = JSON.parse(event.data);
             if (data.type === "risk_update" && data.portfolio_id === portfolioId) {
               setRiskData(data);
+            } else if (data.type === "alert" && data.portfolio_id === portfolioId) {
+              setAlertMsg(data);
             }
           } catch (e) {
             console.error("WS parse error:", e);
@@ -104,5 +117,5 @@ export function useRiskSocket(portfolioId: string | null) {
     };
   }, [portfolioId]);
 
-  return { riskData, error };
+  return { riskData, alertMsg, error };
 }

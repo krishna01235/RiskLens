@@ -6,19 +6,32 @@ import { apiClient } from "@/lib/api-client";
 import { useRiskSocket } from "@/hooks/useRiskSocket";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
+import AlertBanner from "@/components/dashboard/AlertBanner";
+import RiskBudgetBar from "@/components/dashboard/RiskBudgetBar";
+import RiskBudgetModal, { RiskBudget } from "@/components/settings/RiskBudgetModal";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [budget, setBudget] = useState<RiskBudget | null>(null);
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
 
   useEffect(() => {
-    async function fetchPortfolio() {
+    async function fetchPortfolioAndBudget() {
       try {
         const portfolios = await apiClient.get<any[]>("/portfolios");
         if (portfolios && portfolios.length > 0) {
-          setPortfolioId(portfolios[0].id);
+          const pid = portfolios[0].id;
+          setPortfolioId(pid);
+          
+          try {
+            const b = await apiClient.get<RiskBudget>(`/portfolios/${pid}/risk-budget`);
+            setBudget(b);
+          } catch (budgetErr) {
+            console.error("Failed to fetch budget", budgetErr);
+          }
         } else {
           router.push("/onboarding");
         }
@@ -29,10 +42,10 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
-    fetchPortfolio();
+    fetchPortfolioAndBudget();
   }, [router]);
 
-  const { riskData, error: wsError } = useRiskSocket(portfolioId);
+  const { riskData, alertMsg, error: wsError } = useRiskSocket(portfolioId);
 
   if (loading) {
     return (
@@ -63,6 +76,8 @@ export default function DashboardPage() {
             <p>{apiError || wsError}</p>
           </div>
         )}
+
+        <AlertBanner alertMsg={alertMsg} />
         
         <div className="grid gap-6 sm:grid-cols-2">
           {/* Portfolio Value Card */}
@@ -107,7 +122,13 @@ export default function DashboardPage() {
               <p className="mt-1 text-sm text-slate-500">More price history is needed for a reliable estimate.</p>
             </div>
           ) : riskData.metrics ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-6">
+              <RiskBudgetBar 
+                budget={budget} 
+                currentCvar={riskData.metrics.cvar_95}
+                onConfigureClick={() => setIsBudgetModalOpen(true)}
+              />
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <MetricCard 
                 label="95% Value at Risk (VaR)" 
                 value={`$${riskData.metrics.var_95.toFixed(2)}`} 
@@ -134,6 +155,7 @@ export default function DashboardPage() {
                 accent={riskData.metrics.sharpe !== null && riskData.metrics.sharpe >= 1 ? "positive" : "default"}
               />
             </div>
+            </div>
           ) : null}
         </div>
 
@@ -145,6 +167,18 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {isBudgetModalOpen && portfolioId && (
+        <RiskBudgetModal
+          portfolioId={portfolioId}
+          initialBudget={budget}
+          onClose={() => setIsBudgetModalOpen(false)}
+          onSave={(updatedBudget) => {
+            setBudget(updatedBudget);
+            setIsBudgetModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
