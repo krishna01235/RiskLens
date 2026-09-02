@@ -11,6 +11,8 @@ import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
+# pyright: ignore [reportMissingImports, reportMissingModuleSource]
+# pyrefly: ignore [missing-import]
 import bcrypt
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -174,10 +176,8 @@ async def refresh(db: AsyncSession, raw_refresh_token: str) -> tuple[str, str]:
         raise AuthError("Refresh token not found.", status_code=401)
     if record.revoked_at is not None:
         raise AuthError("Refresh token has been revoked.", status_code=401)
-    # expires_at may be timezone-naive (DB stores UTC without tz info)
+    # expires_at is returned as an aware datetime by asyncpg from the TIMESTAMPTZ column
     expires_at = record.expires_at
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=UTC)
     if expires_at < now:
         raise AuthError("Refresh token has expired.", status_code=401)
 

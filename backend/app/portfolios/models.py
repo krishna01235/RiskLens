@@ -1,10 +1,10 @@
 """portfolios/models.py -- ORM models: portfolios, holdings, risk_budgets."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Index, Numeric, Text, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Numeric, Text, UniqueConstraint, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,7 +26,9 @@ class Portfolio(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False, default="My Portfolio")
     source: Mapped[str] = mapped_column(Text, nullable=False)  # demo | csv | manual
     currency: Mapped[str] = mapped_column(Text, nullable=False, default="USD")
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        nullable=False, default=lambda: datetime.now(UTC)
+    )
 
     # relationships
     user: Mapped["User"] = relationship(back_populates="portfolios")  # type: ignore[name-defined]
@@ -36,19 +38,19 @@ class Portfolio(Base):
     risk_budget: Mapped["RiskBudget | None"] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan", uselist=False
     )
-    risk_snapshots: Mapped[list["RiskSnapshot"]] = relationship(  # type: ignore[name-defined]
+    risk_snapshots: Mapped[list["RiskSnapshot"]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"
     )
-    alerts: Mapped[list["Alert"]] = relationship(  # type: ignore[name-defined]
+    alerts: Mapped[list["Alert"]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"
     )
-    simulations: Mapped[list["Simulation"]] = relationship(  # type: ignore[name-defined]
+    simulations: Mapped[list["Simulation"]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"
     )
-    replays: Mapped[list["Replay"]] = relationship(  # type: ignore[name-defined]
+    replays: Mapped[list["Replay"]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"
     )
-    ai_conversations: Mapped[list["AiConversation"]] = relationship(  # type: ignore[name-defined]
+    ai_conversations: Mapped[list["AiConversation"]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"
     )
 
@@ -71,7 +73,7 @@ class Holding(Base):
     symbol: Mapped[str] = mapped_column(Text, nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     average_price: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
-    added_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="holdings")
 
@@ -94,6 +96,8 @@ class RiskBudget(Base):
     breach_threshold: Mapped[Decimal] = mapped_column(
         Numeric(5, 4), nullable=False, default=Decimal("1.00")
     )
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        nullable=False, default=lambda: datetime.now(UTC)
+    )
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="risk_budget")

@@ -21,6 +21,7 @@ from app.auth.router import router as auth_router
 from app.config import get_settings
 from app.market.router import market_router
 from app.portfolios.router import portfolios_router
+from app.ws.router import router as ws_router
 
 settings = get_settings()
 

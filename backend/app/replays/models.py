@@ -1,10 +1,10 @@
 """replays/models.py -- ORM models: replays, replay_daily_states, backtest_results."""
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, UTC
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, Index, Numeric, Text
+from sqlalchemy import Boolean, Date, ForeignKey, Index, Numeric, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,8 +24,8 @@ class Replay(Base):
     )
     period_key: Mapped[str] = mapped_column(Text, nullable=False)  # e.g. '2022_rate_shock'
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     portfolio: Mapped["Portfolio"] = relationship(back_populates="replays")  # type: ignore[name-defined]
     daily_states: Mapped[list["ReplayDailyState"]] = relationship(
