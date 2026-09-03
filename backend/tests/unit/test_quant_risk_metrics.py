@@ -471,3 +471,83 @@ class TestComputeRiskEstimate:
         assert not result.insufficient_data
         assert result.volatility == 0.0
         assert result.risk_contributions == []
+
+class TestCorrelationClusters:
+    def test_cov_to_corr(self):
+        from quant.risk_metrics import cov_to_corr
+        
+        # Diagonal is 4, so std is 2.
+        # cov(0, 1) = 2, so corr(0, 1) = 2 / (2 * 2) = 0.5
+        cov_matrix = np.array([
+            [4.0, 2.0],
+            [2.0, 4.0]
+        ])
+        
+        corr = cov_to_corr(cov_matrix)
+        
+        np.testing.assert_allclose(corr, np.array([
+            [1.0, 0.5],
+            [0.5, 1.0]
+        ]))
+
+    def test_cov_to_corr_zero_variance(self):
+        from quant.risk_metrics import cov_to_corr
+        
+        cov_matrix = np.array([
+            [4.0, 0.0],
+            [0.0, 0.0]
+        ])
+        
+        corr = cov_to_corr(cov_matrix)
+        
+        # Zero variance asset should have 0 correlation with others, 1.0 with itself
+        np.testing.assert_allclose(corr, np.array([
+            [1.0, 0.0],
+            [0.0, 1.0]
+        ]))
+
+    def test_detect_correlation_clusters_synthetic(self):
+        from quant.risk_metrics import detect_correlation_clusters
+        
+        symbols = ["AAPL", "MSFT", "GOOG", "JPM", "BAC", "GOLD"]
+        
+        # Synthetic correlation matrix
+        # AAPL, MSFT, GOOG are highly correlated (>0.7)
+        # JPM, BAC are highly correlated (>0.7)
+        # GOLD is uncorrelated
+        
+        corr = np.array([
+            [1.0, 0.8, 0.9, 0.1, 0.1, -0.1],  # AAPL
+            [0.8, 1.0, 0.75, 0.2, 0.1, -0.2], # MSFT
+            [0.9, 0.75, 1.0, 0.0, 0.1, -0.1], # GOOG
+            [0.1, 0.2, 0.0, 1.0, 0.85, 0.0],  # JPM
+            [0.1, 0.1, 0.1, 0.85, 1.0, 0.1],  # BAC
+            [-0.1, -0.2, -0.1, 0.0, 0.1, 1.0] # GOLD
+        ])
+        
+        clusters = detect_correlation_clusters(corr, symbols, threshold=0.7)
+        
+        clusters_as_sets = [set(c) for c in clusters]
+        
+        assert len(clusters) == 2
+        assert {"AAPL", "GOOG", "MSFT"} in clusters_as_sets
+        assert {"BAC", "JPM"} in clusters_as_sets
+        
+    def test_detect_correlation_clusters_empty(self):
+        from quant.risk_metrics import detect_correlation_clusters
+        
+        symbols = ["A", "B", "C"]
+        corr = np.eye(3) # Identity matrix -> zero off-diagonal correlations
+        
+        clusters = detect_correlation_clusters(corr, symbols, threshold=0.7)
+        assert len(clusters) == 0  # No single-item clusters
+        
+    def test_detect_correlation_clusters_one_asset(self):
+        from quant.risk_metrics import detect_correlation_clusters
+        
+        symbols = ["A"]
+        corr = np.array([[1.0]])
+        
+        clusters = detect_correlation_clusters(corr, symbols, threshold=0.7)
+        assert len(clusters) == 0
+
