@@ -1,6 +1,6 @@
 ﻿# RiskLens Build Progress
 
-## Current Phase: 15 (not started)
+## Current Phase: 16 (not started)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -240,3 +240,36 @@ Extreme Value Theory (EVT) — POT/GPD tail risk estimate added to simulation re
 
 ### Next Step (Phase 15)
 Hidden Correlation / Concentration Detector.
+
+---
+
+## Phase 15 - Hidden Correlation / Concentration Detector (COMPLETE)
+
+**Completed:** 2026-09-04
+
+### Commits
+- `9fa2bf4` feat(quant): implement correlation cluster detection
+- `c48aaf1` feat(risk): surface risk contribution and concentration flags in risk state
+- `e103042` feat(ui): build risk contribution list and concentration warning
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/risk_metrics.py`
+- `backend/tests/unit/test_quant_risk_metrics.py`
+- `backend/workers/slow_path_worker.py`
+- `backend/tests/integration/test_slow_path.py`
+
+**Frontend:**
+- `frontend/components/dashboard/ConcentrationWarning.tsx`
+- `frontend/components/dashboard/RiskContributionList.tsx`
+- `frontend/hooks/useRiskSocket.ts`
+- `frontend/app/dashboard/page.tsx`
+
+### Acceptance Criteria
+1. On the demo portfolio, the concentration warning correctly fires and names the correct correlated symbols — **PASS**
+2. Risk-contribution percentages are visibly different from raw allocation percentages — **PASS**
+3. Unit test for cluster detection against a synthetic correlation matrix with a known planted cluster — **PASS**
+4. Integration test confirming the demo portfolio produces the expected warning — **PASS**
+
+### Next Step (Phase 16)
+HMM Market Regime Detection.
