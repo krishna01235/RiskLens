@@ -443,6 +443,9 @@ def detect_correlation_clusters(
         List of asset names.
     threshold:
         Correlation threshold (default 0.7).
+        0.7 is a standard heuristic in quantitative finance for denoting 
+        "strong" positive correlation, avoiding false positives from 
+        broad market beta while capturing true concentration risk.
         
     Returns
     -------

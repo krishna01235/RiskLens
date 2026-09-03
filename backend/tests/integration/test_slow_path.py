@@ -236,15 +236,27 @@ async def test_recompute_demo_portfolio_generates_correlation_flags(
 async def test_persist_snapshot_writes_row(
     db_session, portfolio_with_holding: Portfolio
 ) -> None:
+    from quant.risk_metrics import RiskContribution
+    
     estimate = RiskEstimate(
         volatility=0.25,
         var_95=Decimal("100.00"),
         cvar_95=Decimal("150.00"),
         sharpe=1.5,
         max_drawdown=0.2,
+        risk_contributions=[
+            RiskContribution(symbol="AAPL", weight=1.0, mcr=0.25, rc=0.25, rc_pct=1.0)
+        ]
     )
+    test_flags = [["AAPL", "MSFT"]]
+    
     await persist_snapshot(
-        db_session, str(portfolio_with_holding.id), estimate, datetime.now(UTC)
+        db_session, 
+        str(portfolio_with_holding.id), 
+        estimate, 
+        datetime.now(UTC),
+        alert_state="SAFE",
+        correlation_flags=test_flags
     )
 
     result = await db_session.execute(
@@ -256,6 +268,8 @@ async def test_persist_snapshot_writes_row(
     assert float(row.var_95) == 100.00
     assert float(row.volatility) == 0.25
     assert row.risk_state == "SAFE"
+    assert row.risk_contribution == {"AAPL": 1.0}
+    assert row.correlation_flags == [["AAPL", "MSFT"]]
 
 
 @pytest.mark.asyncio
