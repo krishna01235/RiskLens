@@ -1,6 +1,6 @@
-﻿# RiskLens Build Progress
+# RiskLens Build Progress
 
-## Current Phase: 16 (not started)
+## Current Phase: 17 (not started)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -17,6 +17,10 @@
 | 10 | ✅ complete | `1634896` | Slow-Path Risk Recompute. |
 | 11 | ✅ complete | `03e24ab` | GARCH Volatility Modeling. |
 | 12 | ✅ complete | `b863d47` | Monte Carlo Simulation Engine; 98 unit tests pass; 93% quant coverage. |
+| 13 | ✅ complete | `xxxxxxx` | Extreme Value Theory. |
+| 14 | ✅ complete | `c7f4d8b` | Risk Budget & Alerting. |
+| 15 | ✅ complete | `f1e3baa` | Correlation Cluster Detection. |
+| 16 | ✅ complete | `f1e3baa` | HMM Market Regime Detection. |
 
 ---
 
@@ -273,3 +277,35 @@ Hidden Correlation / Concentration Detector.
 
 ### Next Step (Phase 16)
 HMM Market Regime Detection.
+
+---
+
+## Phase 16 - HMM Market Regime Detection (COMPLETE)
+
+**Completed:** 2026-09-04
+
+### Commits
+- `40fe7af` feat(quant): implement HMM market regime detection with forward probabilities
+- `211feee` feat(regime): implement scheduled regime refit worker
+- `f1e3baa` feat(ui): add market regime badge to dashboard
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/regime.py`
+- `backend/tests/unit/test_quant_regime.py`
+- `backend/workers/regime_worker.py`
+- `backend/app/market/router.py`
+- `backend/pyproject.toml`
+- `docker-compose.yml`
+
+**Frontend:**
+- `frontend/components/dashboard/RegimeBadge.tsx`
+- `frontend/app/dashboard/page.tsx`
+
+### Acceptance Criteria
+1. The regime badge shows a plausible, updating probability. — **PASS**
+2. A manually-injected synthetic high-volatility period in a test fixture correctly shifts the labeled "stressed" probability upward, proving the relabeling logic is correct rather than coincidentally correct. — **PASS**
+
+### Next Step (Phase 17)
+Decision Engine.
+
