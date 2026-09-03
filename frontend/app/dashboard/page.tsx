@@ -11,6 +11,7 @@ import RiskBudgetBar from "@/components/dashboard/RiskBudgetBar";
 import RiskBudgetModal, { RiskBudget } from "@/components/settings/RiskBudgetModal";
 import { ConcentrationWarning } from "@/components/dashboard/ConcentrationWarning";
 import { RiskContributionList } from "@/components/dashboard/RiskContributionList";
+import { RegimeBadge } from "@/components/dashboard/RegimeBadge";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -68,9 +69,12 @@ export default function DashboardPage() {
           Back to onboarding
         </button>
 
-        <h1 className="mb-8 text-3xl font-bold tracking-tight sm:text-4xl">
-          Risk Dashboard
-        </h1>
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Risk Dashboard
+          </h1>
+          <RegimeBadge />
+        </div>
         
         {(apiError || wsError) && (
           <div className="mb-6 flex items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-400">
