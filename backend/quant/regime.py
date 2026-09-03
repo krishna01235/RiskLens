@@ -1,3 +1,24 @@
+"""
+quant/regime.py — HMM market regime detection (F12).
+
+Fits a 2-state Gaussian HMM on an equal-weighted benchmark return series to
+produce a filtered (forward) probability that the market is currently in a
+"stressed" (high-variance) state vs. a "calm" (low-variance) state.
+
+Key implementation decisions:
+  - 2 states: fits the "calm vs. stressed" dichotomy with the fewest parameters.
+  - covariance_type="full": each state gets its own full covariance matrix so
+    the variance difference that identifies the stressed state is directly
+    readable from model.covars_.
+  - Post-fit relabeling: after fitting, state 1 is always reassigned to be the
+    higher-variance state. This prevents the label-flip edge case where
+    hmmlearn's random initialisation sometimes assigns the stressed state to
+    index 0, breaking downstream convention.
+  - Forward (filtered) probability: we compute P(q_t | O_1..O_t) using the
+    forward algorithm, NOT the smoothed Viterbi path P(q_t | O_1..O_T).
+    The forward pass respects the real-time constraint — it uses only data
+    available at timestep t, making it appropriate for live alerting.
+"""
 import numpy as np
 from hmmlearn import hmm
 from scipy.special import logsumexp

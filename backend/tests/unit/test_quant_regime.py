@@ -49,3 +49,35 @@ def test_hmm_forward_probability_uses_only_past_data():
     # The probability of being stressed should be fairly high because the most recent 
     # observations are large shocks.
     assert prob > 0.4, "Filtered probability failed to detect recent volatility shock"
+
+
+def test_label_stability_across_independent_refits():
+    """
+    Guard against the label-swapping edge case.
+
+    Spec requirement: the 'stressed' label must consistently track the
+    higher-variance state across independent re-fits (guards against the
+    label-swapping edge case).
+
+    We fit the model N times on the same data and verify that state 1 is
+    ALWAYS the higher-variance state in every single fit, regardless of
+    the random initialisation.
+    """
+    np.random.seed(0)
+    calm = np.random.normal(0, 0.005, 500)
+    stressed = np.random.normal(0, 0.05, 500)
+    returns = np.concatenate([calm, stressed])
+
+    for trial in range(5):
+        # Re-create the model each time (different random_state to stress relabeling)
+        import numpy as _np
+        _np.random.seed(trial * 7)
+        model = fit_hmm(returns)
+
+        var_0 = model.covars_[0, 0, 0]
+        var_1 = model.covars_[1, 0, 0]
+        assert var_1 >= var_0, (
+            f"Trial {trial}: state 1 (var={var_1:.6f}) is NOT the stressed state "
+            f"— state 0 has higher variance ({var_0:.6f}). Relabeling broke."
+        )
+
