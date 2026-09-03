@@ -30,6 +30,7 @@ dependencies = [
     "scikit-learn>=1.5",
     "arch>=7.0",
     "arq>=0.25",
+    "hmmlearn>=0.3.0",
 ]
 
 [project.optional-dependencies]
