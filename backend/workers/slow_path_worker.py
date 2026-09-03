@@ -283,8 +283,13 @@ def compute_risk_from_history(
     )
 
     if estimate.insufficient_data:
-        return "insufficient_data", None, None
-    return "ready", estimate, cov_result.estimator
+        return "insufficient_data", None, []
+        
+    from quant.risk_metrics import cov_to_corr, detect_correlation_clusters
+    corr = cov_to_corr(cov_result.matrix)
+    clusters = detect_correlation_clusters(corr, cov_result.symbols)
+
+    return "ready", estimate, clusters
 
 
 def _metrics_payload(estimate: RiskEstimate) -> dict[str, float | int | None]:
@@ -339,7 +344,7 @@ async def recompute_portfolio(
         closes = await redis.hgetall(f"{_PRICE_HISTORY_PREFIX}{h.symbol}")
         history[h.symbol] = dict(closes)
 
-    data_status, estimate, _estimator = compute_risk_from_history(history, holdings)
+    data_status, estimate, clusters = compute_risk_from_history(history, holdings)
     now_unix = time.time()
 
     risk_field = json.dumps(
@@ -347,6 +352,7 @@ async def recompute_portfolio(
             "data_status": data_status,
             "metrics": _metrics_payload(estimate) if estimate else None,
             "risk_contributions": _contributions_payload(estimate) if estimate else [],
+            "correlation_flags": clusters if clusters else [],
             "risk_updated_at": now_unix,
         }
     )
@@ -364,6 +370,7 @@ async def recompute_portfolio(
                 "risk_contributions": (
                     _contributions_payload(estimate) if estimate else []
                 ),
+                "correlation_flags": clusters if clusters else [],
                 "risk_updated_at": now_unix,
                 "portfolio_value": current.get("portfolio_value"),
                 "daily_pnl": current.get("daily_pnl"),
@@ -515,6 +522,7 @@ async def persist_snapshot(
     estimate: RiskEstimate,
     captured_at: datetime,
     alert_state: str = "SAFE",
+    correlation_flags: list[list[str]] | None = None,
 ) -> None:
     """Persist an append-only ``risk_snapshots`` audit row (F5: ~every 5 min).
 
@@ -535,8 +543,8 @@ async def persist_snapshot(
             else None
         ),
         risk_state=alert_state,          # Phase 14: real state from state machine
-        risk_contribution={},            # populated in Phase 15
-        correlation_flags=[],            # populated in Phase 15
+        risk_contribution={rc.symbol: rc.rc_pct for rc in estimate.risk_contributions} if estimate.risk_contributions else {},
+        correlation_flags=correlation_flags or [],
     )
     db.add(snapshot)
     await db.commit()
@@ -611,9 +619,11 @@ async def _flush_portfolio(
                         alert_state = await redis.hget(
                             f"{_RISK_STATE_PREFIX}{portfolio_id}", _ALERT_STATE_KEY
                         ) or "SAFE"
+                        flags = risk_data.get("correlation_flags") or []
                         await persist_snapshot(
                             db, portfolio_id, estimate, datetime.now(UTC),
                             alert_state=alert_state,
+                            correlation_flags=flags,
                         )
                         last_snapshot_at[portfolio_id] = now
             except Exception:

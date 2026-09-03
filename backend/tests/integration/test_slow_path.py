@@ -162,9 +162,74 @@ async def test_recompute_insufficient_without_history_is_explicit(
 
     await recompute_portfolio(db_session, redis, pid, "", set())
 
-    risk_data = json.loads(redis.data[f"risk_state:{pid}"]["risk"])
-    assert risk_data["data_status"] == "insufficient_data"
-    assert risk_data["metrics"] is None
+    state_json = await redis.hget(f"risk_state:{pid}", "risk")
+    state = json.loads(state_json)
+    assert state["data_status"] == "insufficient_data"
+    assert state["metrics"] is None
+
+
+@pytest.mark.asyncio
+async def test_recompute_demo_portfolio_generates_correlation_flags(
+    db_session, slow_path_user: User
+) -> None:
+    """Test that a portfolio with highly correlated assets gets flagged."""
+    from app.portfolios.service import create_demo_portfolio
+    
+    redis = FakeRedis()
+    
+    # Create the demo portfolio (which contains AMD, NVDA, INTC)
+    portfolio = await create_demo_portfolio(db_session, slow_path_user.id)
+    pid = str(portfolio.id)
+    
+    # Generate synthetic price history with high correlation for semis
+    # and low correlation for the others (JNJ)
+    base_trend = np.linspace(100, 150, 50)
+    # Semiconductors move together strongly
+    nvda_prices = base_trend + np.random.normal(0, 2, 50)
+    amd_prices = base_trend + np.random.normal(0, 2, 50)
+    intc_prices = base_trend + np.random.normal(0, 2, 50)
+    # JNJ is uncorrelated
+    jnj_prices = np.linspace(50, 55, 50) + np.random.normal(0, 1, 50)
+    
+    history_dict = {
+        "NVDA": nvda_prices,
+        "AMD": amd_prices,
+        "INTC": intc_prices,
+        "JNJ": jnj_prices,
+    }
+    
+    # Write to fake redis
+    for symbol, prices in history_dict.items():
+        mapping = {}
+        for i, price in enumerate(prices):
+            # mock dates
+            day = (datetime(2023, 1, 1) + timedelta(days=i)).date().isoformat()
+            mapping[day] = str(price)
+        await redis.hset(f"price_history:{symbol}", mapping=mapping)
+        
+    await recompute_portfolio(db_session, redis, pid, "fake_key", set())
+    
+    # Verify the state in Redis
+    state_json = await redis.hget(f"risk_state:{pid}", "risk")
+    assert state_json is not None
+    
+    state = json.loads(state_json)
+    assert state["data_status"] == "ready"
+    assert state["metrics"] is not None
+    
+    # Verify risk contributions are populated
+    rcs = state["risk_contributions"]
+    assert len(rcs) == 4
+    for rc in rcs:
+        assert "symbol" in rc
+        assert "rc_pct" in rc
+        
+    # Verify correlation flags caught the semiconductor cluster
+    flags = state["correlation_flags"]
+    assert len(flags) > 0
+    # There should be at least one cluster containing NVDA, AMD, INTC
+    semi_cluster = next((c for c in flags if "NVDA" in c and "AMD" in c), None)
+    assert semi_cluster is not None, f"Flags were: {flags}"
 
 
 @pytest.mark.asyncio
