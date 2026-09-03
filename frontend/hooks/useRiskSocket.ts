@@ -20,6 +20,14 @@ export interface AlertMessage {
   fired_at: string;
 }
 
+export interface RiskContribution {
+  symbol: string;
+  weight: number;
+  mcr: number;
+  rc: number;
+  rc_pct: number;
+}
+
 export interface RiskUpdate {
   portfolio_id: string;
   portfolio_value: string;
@@ -27,7 +35,8 @@ export interface RiskUpdate {
   timestamp: number;
   data_status?: "pending" | "ready" | "insufficient_data";
   metrics?: RiskMetrics | null;
-  risk_contributions?: any[];
+  risk_contributions?: RiskContribution[];
+  correlation_flags?: string[][];
   risk_updated_at?: number;
 }
 

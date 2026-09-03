@@ -9,6 +9,8 @@ import MetricCard from "@/components/dashboard/MetricCard";
 import AlertBanner from "@/components/dashboard/AlertBanner";
 import RiskBudgetBar from "@/components/dashboard/RiskBudgetBar";
 import RiskBudgetModal, { RiskBudget } from "@/components/settings/RiskBudgetModal";
+import { ConcentrationWarning } from "@/components/dashboard/ConcentrationWarning";
+import { RiskContributionList } from "@/components/dashboard/RiskContributionList";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -123,6 +125,7 @@ export default function DashboardPage() {
             </div>
           ) : riskData.metrics ? (
             <div className="space-y-6">
+              <ConcentrationWarning correlationFlags={riskData.correlation_flags} />
               <RiskBudgetBar 
                 budget={budget} 
                 currentCvar={riskData.metrics.cvar_95}
@@ -154,7 +157,8 @@ export default function DashboardPage() {
                 value={riskData.metrics.sharpe !== null ? riskData.metrics.sharpe.toFixed(2) : "N/A"} 
                 accent={riskData.metrics.sharpe !== null && riskData.metrics.sharpe >= 1 ? "positive" : "default"}
               />
-            </div>
+              </div>
+              <RiskContributionList contributions={riskData.risk_contributions} />
             </div>
           ) : null}
         </div>
