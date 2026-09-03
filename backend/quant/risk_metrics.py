@@ -403,3 +403,80 @@ def compute_risk_estimate(
         n_obs=n,
         insufficient_data=False,
     )
+
+
+def cov_to_corr(cov_matrix: np.ndarray) -> np.ndarray:
+    """
+    Convert a covariance matrix to a correlation matrix.
+    
+    cor(i, j) = cov(i, j) / (std_i * std_j)
+    """
+    v = np.sqrt(np.maximum(np.diag(cov_matrix), 0.0))
+    outer_v = np.outer(v, v)
+    # Prevent division by zero if an asset has zero variance
+    with np.errstate(divide="ignore", invalid="ignore"):
+        corr = cov_matrix / outer_v
+    corr[np.isinf(corr)] = 0.0
+    corr[np.isnan(corr)] = 0.0
+    # Ensure diagonal is exactly 1.0
+    np.fill_diagonal(corr, 1.0)
+    return corr
+
+
+def detect_correlation_clusters(
+    corr_matrix: np.ndarray,
+    symbols: list[str],
+    threshold: float = 0.7,
+) -> list[list[str]]:
+    """
+    Identify clusters of highly correlated assets.
+    
+    Returns a list of clusters (lists of symbols) where each asset in a cluster
+    is correlated > threshold with at least one other asset in the cluster
+    (connected components of the correlation graph thresholded at `threshold`).
+    
+    Parameters
+    ----------
+    corr_matrix:
+        (N, N) correlation matrix.
+    symbols:
+        List of asset names.
+    threshold:
+        Correlation threshold (default 0.7).
+        
+    Returns
+    -------
+    List of symbol lists, e.g. [["NVDA", "AMD", "INTC"], ["XOM", "CVX"]]
+    Single-item clusters are filtered out (returns only clusters size >= 2).
+    """
+    n = len(symbols)
+    if n < 2:
+        return []
+        
+    visited = set()
+    clusters: list[list[str]] = []
+    
+    # Simple BFS/DFS to find connected components
+    for i in range(n):
+        if i in visited:
+            continue
+            
+        cluster_indices = [i]
+        visited.add(i)
+        
+        # BFS queue
+        queue = [i]
+        while queue:
+            curr = queue.pop(0)
+            for j in range(n):
+                if j not in visited and curr != j:
+                    if corr_matrix[curr, j] > threshold:
+                        visited.add(j)
+                        cluster_indices.append(j)
+                        queue.append(j)
+                        
+        if len(cluster_indices) > 1:
+            clusters.append([symbols[idx] for idx in sorted(cluster_indices)])
+            
+    return clusters
+
