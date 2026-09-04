@@ -1,6 +1,6 @@
 ﻿"""app/ai/router.py — POST /ai/explain, POST /ai/what-if, and conversation history.
 
-Rate limit (Phase 18 §11): 30 what-if requests per hour per user.
+Rate limit (Phase 18 §11): 30 what-if requests per hour per user (key = user ID).
 Ownership enforcement is delegated to the service layer.
 """
 
@@ -23,6 +23,7 @@ from app.ai.schemas import (
 from app.auth.models import User
 from app.database import get_db
 from app.deps import get_current_user, get_redis
+from app.main import limiter
 
 ai_router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -46,6 +47,7 @@ async def explain_risk(
 
 
 @ai_router.post("/what-if", response_model=WhatIfResponse)
+@limiter.limit("30/hour")
 async def what_if(
     req: WhatIfRequest,
     request: Request,
@@ -53,14 +55,10 @@ async def what_if(
     redis=Depends(get_redis),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> WhatIfResponse:
-    """Evaluate a natural-language what-if question (30/hour/user rate limit).
+    """Evaluate a natural-language what-if question (30/hour/IP rate limit).
 
     The numeric result (scenario_result) always renders even if narration times out.
     """
-    # Rate limit: 30/hour/user via slowapi (key = user ID for per-user limits)
-    from app.main import limiter
-    limiter.limit("30/hour", key_func=lambda r: str(current_user.id))(lambda: None)(request)
-
     return await service.run_what_if(
         db=db,
         redis=redis,

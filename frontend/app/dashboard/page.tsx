@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
 import { useRiskSocket } from "@/hooks/useRiskSocket";
-import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
 import AlertBanner from "@/components/dashboard/AlertBanner";
 import RiskBudgetBar from "@/components/dashboard/RiskBudgetBar";
@@ -12,6 +12,7 @@ import RiskBudgetModal, { RiskBudget } from "@/components/settings/RiskBudgetMod
 import { ConcentrationWarning } from "@/components/dashboard/ConcentrationWarning";
 import { RiskContributionList } from "@/components/dashboard/RiskContributionList";
 import { RegimeBadge } from "@/components/dashboard/RegimeBadge";
+import { AiChatPanel } from "@/components/ai/AiChatPanel";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [budget, setBudget] = useState<RiskBudget | null>(null);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
 
   useEffect(() => {
     async function fetchPortfolioAndBudget() {
@@ -174,6 +176,36 @@ export default function DashboardPage() {
               : "Waiting for market data..."}
           </p>
         </div>
+
+        {/* AI Risk Analyst Panel */}
+        {portfolioId && (
+          <div className="mt-8">
+            <button
+              id="ai-analyst-toggle"
+              onClick={() => setIsAiPanelOpen((o) => !o)}
+              className="flex w-full items-center justify-between rounded-xl border border-violet-500/30 bg-violet-500/10 px-5 py-4 text-left transition-colors hover:bg-violet-500/15"
+            >
+              <span className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-violet-400" />
+                <span className="text-sm font-semibold text-violet-200">AI Risk Analyst</span>
+                <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-xs text-violet-300">
+                  Ask what-if questions
+                </span>
+              </span>
+              {isAiPanelOpen ? (
+                <ChevronUp className="h-4 w-4 text-violet-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-violet-400" />
+              )}
+            </button>
+
+            {isAiPanelOpen && (
+              <div className="mt-3 h-[540px]">
+                <AiChatPanel portfolioId={portfolioId} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {isBudgetModalOpen && portfolioId && (
