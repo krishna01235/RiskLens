@@ -20,3 +20,9 @@ REDUCE_POSITION_MARGIN = 0.05
 
 # Timeout in seconds for Monte Carlo simulation of a single decision candidate.
 CANDIDATE_MC_TIMEOUT = 2.0
+
+# Minimum days required for the Kupiec Proportion of Failures backtest to be statistically valid.
+MIN_KUPIEC_SAMPLE_DAYS = 252 // 4  # Roughly one quarter of trading days minimum for a valid backtest.
+
+# The Kupiec likelihood ratio test significance level. Matches 95% VaR confidence.
+KUPIEC_SIGNIFICANCE_LEVEL = 0.95

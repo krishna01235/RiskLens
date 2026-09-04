@@ -1,6 +1,6 @@
 # RiskLens Build Progress
 
-## Current Phase: 18 (complete)
+## Current Phase: 19 (complete)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -23,6 +23,7 @@
 | 16 | ✅ complete | `f1e3baa` | HMM Market Regime Detection. |
 | 17 | ✅ complete | `3e8e192` | Decision Engine. |
 | 18 | ✅ complete | `b4fba39` | AI Risk Analyst (LangGraph Explain + What-If). |
+| 19 | ✅ complete | `xxxxxxx` | Historical Replay & Kupiec Backtest. |
 
 ---
 
@@ -576,3 +577,41 @@ HMM Market Regime Detection.
 5. Scenario result card renders deterministic numbers from the quant engine independent of narration — **PASS**
 6. 23/23 Phase 18 unit tests pass — **PASS**
 7. TypeScript compiles clean for Phase 18 files — **PASS**
+
+---
+
+## Phase 19 - Historical Replay & Kupiec Backtest (COMPLETE)
+
+**Completed:** 2026-09-04
+
+### Commits
+- `xxxxxxx` feat(quant): implement ReplayDailyState and Kupiec backtest logic
+- `xxxxxxx` feat(worker): implement replay_job to process daily loops
+- `xxxxxxx` test(replays): add integration tests and ownership validation
+- `xxxxxxx` feat(ui): build Kupiec Backtest Replay chart and pass/fail badges
+
+### Files Created / Modified
+**Backend:**
+- `backend/app/replays/models.py`
+- `backend/app/replays/schemas.py`
+- `backend/app/replays/service.py`
+- `backend/app/replays/router.py`
+- `backend/workers/replay_job.py`
+- `backend/workers/job_worker.py`
+- `backend/app/main.py`
+- `backend/app/deps.py`
+- `backend/tests/integration/test_replays.py`
+- `backend/alembic/versions/` (migration)
+
+**Frontend:**
+- `frontend/app/dashboard/replay/page.tsx`
+
+### Acceptance Criteria
+1. Replay accurately reconstructs T-25 returns using the existing portfolio — **PASS**
+2. VaR is strictly computed *without* look-ahead data — **PASS**
+3. Kupiec POF score evaluates pass/fail dynamically — **PASS**
+4. The chart renders VaR prediction vs actual portfolio return with breach markers — **PASS**
+5. Circular dependencies fixed, ensuring `run_replay_job` and integration tests work end-to-end — **PASS**
+
+### Next Step
+Finish project / Wrap-up.

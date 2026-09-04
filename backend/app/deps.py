@@ -23,6 +23,11 @@ import redis.asyncio as redis
 from collections.abc import AsyncGenerator
 
 settings = get_settings()
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 redis_pool = redis.ConnectionPool.from_url(settings.redis_url, decode_responses=True)
 
 async def get_redis() -> AsyncGenerator[redis.Redis, None]:

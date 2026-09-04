@@ -1,4 +1,4 @@
-﻿"""alembic/env.py -- Async-compatible Alembic environment.
+"""alembic/env.py -- Async-compatible Alembic environment.
 
 Uses SQLAlchemy asyncpg engine wrapped with run_sync so that Alembic`s
 synchronous migration runner can drive an async engine without a separate
@@ -27,6 +27,7 @@ import app.alerts.models  # noqa: F401
 import app.simulations.models  # noqa: F401
 import app.replays.models  # noqa: F401
 import app.ai.models  # noqa: F401
+import app.market.models  # noqa: F401
 
 # -- Alembic Config object ----------------------------------------------------
 config = context.config

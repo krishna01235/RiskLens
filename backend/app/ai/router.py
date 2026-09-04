@@ -1,4 +1,4 @@
-﻿"""app/ai/router.py — POST /ai/explain, POST /ai/what-if, and conversation history.
+"""app/ai/router.py — POST /ai/explain, POST /ai/what-if, and conversation history.
 
 Rate limit (Phase 18 §11): 30 what-if requests per hour per user (key = user ID).
 Ownership enforcement is delegated to the service layer.
@@ -22,8 +22,7 @@ from app.ai.schemas import (
 )
 from app.auth.models import User
 from app.database import get_db
-from app.deps import get_current_user, get_redis
-from app.main import limiter
+from app.deps import get_current_user, get_redis, limiter
 
 ai_router = APIRouter(prefix="/ai", tags=["ai"])
 

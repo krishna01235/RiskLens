@@ -12,13 +12,15 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
+
+from app.deps import limiter
 
 from app.auth.router import router as auth_router
 from app.ai.router import ai_router
+from app.replays.router import replays_router
 from app.config import get_settings
 from app.market.router import market_router
 from app.portfolios.router import portfolios_router
@@ -28,10 +30,6 @@ from app.simulations.router import simulations_router
 from app.ws.router import router as ws_router
 
 settings = get_settings()
-
-# ── Rate limiter (shared instance) ────────────────────────────────────────────
-# Endpoints opt-in with @limiter.limit("5/minute") + request: Request param.
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 # ── Application ───────────────────────────────────────────────────────────────
 
@@ -65,6 +63,7 @@ app.include_router(alerts_router)
 app.include_router(simulations_router)
 app.include_router(ws_router)
 app.include_router(ai_router)
+app.include_router(replays_router)
 
 
 # ── Utility endpoints ─────────────────────────────────────────────────────────

@@ -34,6 +34,7 @@ from app.simulations import service as sim_service
 from quant.covariance import estimate_covariance, InsufficientDataError
 from quant.evt import fit_evt
 from quant.monte_carlo import SimulationParams, run_simulation_batched
+from workers.replay_job import run_replay_job
 from quant.returns import (
     ReturnSeries,
     compute_portfolio_returns,
@@ -194,7 +195,7 @@ class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(
         get_settings().redis_url.replace("redis://", "redis://").split("?")[0]
     )
-    functions = [run_monte_carlo_job]
+    functions = [run_monte_carlo_job, run_replay_job]
     max_jobs = 4
     job_timeout = 300  # 5 minutes hard timeout -- never stuck pending
     keep_result = 3600  # keep job result in Redis for 1 hour
