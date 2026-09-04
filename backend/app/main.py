@@ -18,6 +18,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.auth.router import router as auth_router
+from app.ai.router import ai_router
 from app.config import get_settings
 from app.market.router import market_router
 from app.portfolios.router import portfolios_router
@@ -63,6 +64,7 @@ app.include_router(risk_router)
 app.include_router(alerts_router)
 app.include_router(simulations_router)
 app.include_router(ws_router)
+app.include_router(ai_router)
 
 
 # ── Utility endpoints ─────────────────────────────────────────────────────────

@@ -31,6 +31,9 @@ dependencies = [
     "arch>=7.0",
     "arq>=0.25",
     "hmmlearn>=0.3.0",
+    "langgraph>=0.2",
+    "langchain-anthropic>=0.2",
+    "langchain-core>=0.2",
 ]
 
 [project.optional-dependencies]
