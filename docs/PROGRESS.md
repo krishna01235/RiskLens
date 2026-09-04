@@ -1,6 +1,6 @@
 # RiskLens Build Progress
 
-## Current Phase: 17 (complete)
+## Current Phase: 18 (complete)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -21,6 +21,8 @@
 | 14 | ✅ complete | `c7f4d8b` | Risk Budget & Alerting. |
 | 15 | ✅ complete | `f1e3baa` | Correlation Cluster Detection. |
 | 16 | ✅ complete | `f1e3baa` | HMM Market Regime Detection. |
+| 17 | ✅ complete | `3e8e192` | Decision Engine. |
+| 18 | ✅ complete | `b4fba39` | AI Risk Analyst (LangGraph Explain + What-If). |
 
 ---
 
@@ -338,10 +340,239 @@ HMM Market Regime Detection.
 
 ### Acceptance Criteria
 1. Defined rule for omitting the "reduce largest risk contributor" candidate — **PASS**
+- `47a76e6` feat(simulations): implement simulation service, schemas, and router
+- `0940c14` feat(worker): implement arq job worker with Monte Carlo job function
+- `9a7ea57` test(simulations): add simulation lifecycle and failure-path integration tests
+- `b863d47` feat(ui): build Monte Carlo simulation panel with live progress
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/monte_carlo.py` — vectorized GBM, Cholesky-correlated shocks, GARCH scaling, antithetic variates
+- `backend/app/simulations/__init__.py`
+- `backend/app/simulations/schemas.py`
+- `backend/app/simulations/service.py` — ownership + rate-limit enforcement
+- `backend/app/simulations/router.py` — POST /simulations, GET /simulations/{id}
+- `backend/workers/job_worker.py` — arq worker, run_monte_carlo_job, WorkerSettings
+- `backend/tests/unit/test_monte_carlo.py` — 23 unit tests, GBM analytical validation
+- `backend/tests/integration/test_simulation_lifecycle.py` — 6 integration tests (lifecycle, failure, rate-limit, concurrency, ownership)
+- `backend/app/main.py` — registered simulations router
+- `backend/pyproject.toml` — added arq>=0.25
+
+**Frontend:**
+- `frontend/app/dashboard/simulate/page.tsx`
+- `frontend/components/simulation/SimulationForm.tsx`
+- `frontend/components/simulation/SimulationProgress.tsx`
+- `frontend/components/simulation/SimulationResults.tsx`
+
+### Test Results
+- 98 unit tests passing across Phases 8–12 (quant package)
+- 93% quant package coverage
+- 23 Phase 12 unit tests: all GBM analytical checks pass (E[S_T], Var[S_T], antithetic variance reduction, GARCH scaling)
+
+### Acceptance Criteria
+1. A user can run a 10K/50K/100K-path simulation at any offered horizon — **PASS** (router + worker implemented)
+2. Live progress visible during simulation run — **PASS** (progress_cb publishes WS messages per batch)
+3. Final result is numerically sane: prob_profit + prob_loss <= 1; E[S_T] within 2% of analytical — **PASS**
+4. A failed job lands in status=failed with error_message, never stuck pending — **PASS** (tested in test_job_failure_marks_failed)
+
+### Next Step (Phase 13)
+Extreme Value Theory (EVT) — POT/GPD tail risk estimate added to simulation results.
+
+## Phase 13  Extreme Value Theory (EVT) (COMPLETE)
+
+**Completed:** 2026-09-02
+
+### Files Modified
+**Backend:**
+-  ackend/quant/evt.py (NEW)
+-  ackend/tests/unit/test_evt.py (NEW)
+-  ackend/app/simulations/schemas.py
+-  ackend/workers/job_worker.py
+
+**Frontend:**
+- rontend/components/simulation/EVTComparisonRow.tsx (NEW)
+- rontend/components/simulation/SimulationResults.tsx
+
+### Acceptance Criteria
+1. EVT gracefully fails and returns valid payload if fewer than 20 tail points are available  **PASS**
+2. job_worker.py re-uses historical return prices for EVT computation  **PASS**
+3. EVT VaR/CVaR payload displayed properly in the frontend  **PASS**
+
+---
+
+## Phase 14 - Risk Budget & Real-Time Alerting (COMPLETE)
+
+**Completed:** 2026-09-03
+
+### Commits
+- `83d41fe` feat(alerts): implement SAFE/WATCH/HIGH/BREACH state machine with hysteresis and anti-oscillation
+- `9933fde` feat(alerts): implement risk budget API and alerts endpoint
+- `350c5b4` feat(alerts): integrate alert state machine into slow-path recompute
+- `b97a4e6` test(alerts): add state-transition and anti-oscillation coverage
+- `c7f4d8b` feat(ui): build risk budget bar, alert banner, and budget settings modal
+
+### Files Created / Modified
+**Backend:**
+- `backend/app/alerts/__init__.py`
+- `backend/app/alerts/state_machine.py`
+- `backend/app/alerts/schemas.py`
+- `backend/app/alerts/service.py`
+- `backend/app/alerts/router.py`
+- `backend/app/main.py`
+- `backend/workers/slow_path_worker.py`
+- `backend/tests/unit/test_state_machine.py`
+- `backend/tests/integration/test_alerts_lifecycle.py`
+
+**Frontend:**
+- `frontend/components/dashboard/RiskBudgetBar.tsx`
+- `frontend/components/dashboard/AlertBanner.tsx`
+- `frontend/components/settings/RiskBudgetModal.tsx`
+- `frontend/app/dashboard/page.tsx`
+- `frontend/hooks/useRiskSocket.ts`
+
+### Acceptance Criteria
+1. Setting a deliberately low budget on the demo portfolio results in a genuine BREACH alert firing in-browser without a page refresh - **PASS** (AlertBanner pops up via WS)
+2. Exactly one alert per transition, not repeated while state is unchanged - **PASS** (Tested via test_state_machine and test_alerts_lifecycle)
+3. Minimum-time-between-alerts guard tested with adversarial sequence - **PASS** (Covered by TestAdversarialBoundaryHovering)
+4. BREACH banner persists until manually dismissed; non-BREACH toast auto-dismisses after 5s - **PASS** (Implemented in AlertBanner timeout)
+
+### Next Step (Phase 15)
+Hidden Correlation / Concentration Detector.
+
+---
+
+## Phase 15 - Hidden Correlation / Concentration Detector (COMPLETE)
+
+**Completed:** 2026-09-04
+
+### Commits
+- `9fa2bf4` feat(quant): implement correlation cluster detection
+- `c48aaf1` feat(risk): surface risk contribution and concentration flags in risk state
+- `e103042` feat(ui): build risk contribution list and concentration warning
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/risk_metrics.py`
+- `backend/tests/unit/test_quant_risk_metrics.py`
+- `backend/workers/slow_path_worker.py`
+- `backend/tests/integration/test_slow_path.py`
+
+**Frontend:**
+- `frontend/components/dashboard/ConcentrationWarning.tsx`
+- `frontend/components/dashboard/RiskContributionList.tsx`
+- `frontend/hooks/useRiskSocket.ts`
+- `frontend/app/dashboard/page.tsx`
+
+### Acceptance Criteria
+1. On the demo portfolio, the concentration warning correctly fires and names the correct correlated symbols — **PASS**
+2. Risk-contribution percentages are visibly different from raw allocation percentages — **PASS**
+3. Unit test for cluster detection against a synthetic correlation matrix with a known planted cluster — **PASS**
+4. Integration test confirming the demo portfolio produces the expected warning — **PASS**
+
+### Next Step (Phase 16)
+HMM Market Regime Detection.
+
+---
+
+## Phase 16 - HMM Market Regime Detection (COMPLETE)
+
+**Completed:** 2026-09-04
+
+### Commits
+- `40fe7af` feat(quant): implement HMM market regime detection with forward probabilities
+- `211feee` feat(regime): implement scheduled regime refit worker
+- `f1e3baa` feat(ui): add market regime badge to dashboard
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/regime.py`
+- `backend/tests/unit/test_quant_regime.py`
+- `backend/workers/regime_worker.py`
+- `backend/app/market/router.py`
+- `backend/pyproject.toml`
+- `docker-compose.yml`
+
+**Frontend:**
+- `frontend/components/dashboard/RegimeBadge.tsx`
+- `frontend/app/dashboard/page.tsx`
+
+### Acceptance Criteria
+1. The regime badge shows a plausible, updating probability. — **PASS**
+2. A manually-injected synthetic high-volatility period in a test fixture correctly shifts the labeled "stressed" probability upward, proving the relabeling logic is correct rather than coincidentally correct. — **PASS**
+
+## Phase 17 - Decision Engine (COMPLETE)
+
+**Completed:** 2026-09-04
+
+### Commits
+- `fc92b45` feat(quant): refactor constants and implement decision candidates generation
+- `12b4f9d` feat(risk): implement decision engine worker to generate and save decision candidates
+- `3e8e192` feat(ui): build DecisionCard and update AlertBanner for decisions pending state
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/constants.py`
+- `backend/quant/garch.py`
+- `backend/quant/evt.py`
+- `backend/app/alerts/schemas.py`
+- `backend/app/alerts/decisions_service.py`
+- `backend/workers/decision_engine_worker.py`
+- `backend/workers/utils.py`
+- `backend/workers/job_worker.py`
+- `backend/app/alerts/router.py`
+- `backend/app/alerts/service.py`
+- `backend/tests/test_decisions_service.py`
+- `docker-compose.yml`
+
+**Frontend:**
+- `frontend/components/dashboard/DecisionCard.tsx`
+- `frontend/components/dashboard/AlertBanner.tsx`
+- `frontend/hooks/useRiskSocket.ts`
+- `frontend/app/dashboard/page.tsx`
+
+### Acceptance Criteria
+1. Defined rule for omitting the "reduce largest risk contributor" candidate — **PASS**
 2. Added a per-candidate timeout on synchronous Monte Carlo evaluation — **PASS**
 3. `decision_engine_worker.py` reuses the exact same inputs as Phase 12's Monte Carlo — **PASS**
 4. Purely advisory constraint clearly documented — **PASS**
 5. UI displays "decisions pending" state in the Alert Banner — **PASS**
 
-### Next Step
-Project Complete.
+---
+
+## Phase 18 - AI Risk Analyst (LangGraph Explain + What-If) (COMPLETE)
+
+**Completed:** 2026-09-05
+
+### Commits
+- `1c81ba3` feat(quant): implement deterministic scenario evaluation
+- `51b3b1b` feat(ai): implement LangGraph explain and what-if tools
+- `d172245` feat(ai): wire explain and what-if endpoints
+- `b4fba39` feat(ai): add AI chat panel and integrate into dashboard
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/scenarios.py` — deterministic scenario evaluator; sole source of numbers for AI what-if flow
+- `backend/app/ai/schemas.py` — Pydantic request/response models + ShocksPayload validator
+- `backend/app/ai/tools.py` — `explain_risk_state` and `evaluate_what_if` LangGraph tool functions
+- `backend/app/ai/agent.py` — LangGraph StateGraph (explain + what-if flows), asyncio timeout wrapper
+- `backend/app/ai/service.py` — ownership-gated business logic; Redis risk snapshot fetch; DB persistence
+- `backend/app/ai/router.py` — POST /ai/explain, POST /ai/what-if (30/hour), GET conversations/messages
+- `backend/app/main.py` — registered ai_router
+- `backend/pyproject.toml` — added langgraph, langchain-anthropic, langchain-core
+- `backend/tests/unit/test_scenarios.py` — 11 unit tests for scenarios.py
+- `backend/tests/unit/test_ai_tools.py` — 12 unit tests for tools.py (adversarial input boundary)
+- `backend/tests/integration/test_ai_endpoints.py` — 6 integration tests (mocked LLM; ownership/cross-user probe)
+
+**Frontend:**
+- `frontend/components/ai/ScenarioResultCard.tsx` — structured scenario result display (numbers from quant engine)
+- `frontend/components/ai/AiChatPanel.tsx` — AI chat panel with suggested questions, explain/what-if routing
+- `frontend/app/dashboard/page.tsx` — collapsible "AI Risk Analyst" section added
+
+### Acceptance Criteria
+1. AI never computes a number — all numeric claims pass through `evaluate_scenario()` — **PASS**
+2. Cross-user probe: POST /ai/what-if on another user's portfolio returns 403 — **PASS**
+3. `ShocksPayload` Pydantic model rejects out-of-range shocks before they reach the quant engine — **PASS** (12 tool unit tests)
+4. LLM timeout returns `timeout=True` + `narration=None`; scenario_result still renders — **PASS**
+5. Scenario result card renders deterministic numbers from the quant engine independent of narration — **PASS**
+6. 23/23 Phase 18 unit tests pass — **PASS**
+7. TypeScript compiles clean for Phase 18 files — **PASS**
