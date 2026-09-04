@@ -14,10 +14,7 @@ from typing import Optional
 
 import numpy as np
 from scipy.stats import genpareto
-
-# Requires at least 20 tail exceedances for a stable GenPareto fit, similar
-# to how GARCH requires a minimum number of observations.
-MIN_EVT_EXCEEDANCES = 20
+from backend.quant.constants import MIN_EVT_EXCEEDANCES
 
 
 @dataclass(frozen=True)

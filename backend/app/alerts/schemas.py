@@ -1,4 +1,4 @@
-﻿"""alerts/schemas.py -- Pydantic schemas for risk budget and alerts API."""
+"""alerts/schemas.py -- Pydantic schemas for risk budget and alerts API."""
 
 from __future__ import annotations
 
@@ -72,3 +72,21 @@ class AlertResponse(BaseModel):
 class AlertListResponse(BaseModel):
     items: list[AlertResponse]
     next_cursor: str | None  # ISO datetime of the oldest item, for keyset pagination
+
+
+class DecisionCandidate(BaseModel):
+    label: str
+    expected_return: float
+    cvar: float
+    p_loss: float
+    score: float
+    is_fallback: bool = False
+
+
+class DecisionResponse(BaseModel):
+    id: uuid.UUID
+    alert_id: uuid.UUID
+    candidates: list[DecisionCandidate]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

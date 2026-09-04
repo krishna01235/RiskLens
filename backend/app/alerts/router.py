@@ -1,4 +1,4 @@
-﻿"""alerts/router.py -- Risk budget configuration and alert list endpoints.
+"""alerts/router.py -- Risk budget configuration and alert list endpoints.
 
 Routes:
   PUT  /portfolios/{id}/risk-budget   -> upsert budget (ownership-scoped)
@@ -21,6 +21,7 @@ from app.alerts import service
 from app.alerts.schemas import (
     AlertListResponse,
     AlertResponse,
+    DecisionResponse,
     RiskBudgetResponse,
     RiskBudgetUpsertRequest,
 )
@@ -76,3 +77,20 @@ async def list_alerts(
         items=[AlertResponse.model_validate(a) for a in items],
         next_cursor=next_cursor,
     )
+
+
+@alerts_router.get(
+    "/portfolios/{portfolio_id}/decisions/latest",
+    response_model=DecisionResponse | None,
+)
+async def get_latest_decision(
+    portfolio_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
+) -> DecisionResponse | None:
+    """Return the most recent decision generated for a portfolio's breach."""
+    from app.alerts.schemas import DecisionResponse
+    decision = await service.get_latest_decision(db, portfolio_id, current_user.id)
+    if decision is None:
+        return None
+    return DecisionResponse.model_validate(decision)

@@ -48,7 +48,7 @@ export default function DashboardPage() {
     fetchPortfolioAndBudget();
   }, [router]);
 
-  const { riskData, alertMsg, error: wsError } = useRiskSocket(portfolioId);
+  const { riskData, alertMsg, decisionMsg, error: wsError } = useRiskSocket(portfolioId);
 
   if (loading) {
     return (
@@ -83,7 +83,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <AlertBanner alertMsg={alertMsg} />
+        <AlertBanner alertMsg={alertMsg} decisionMsg={decisionMsg} />
         
         <div className="grid gap-6 sm:grid-cols-2">
           {/* Portfolio Value Card */}

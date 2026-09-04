@@ -13,11 +13,16 @@ interface AlertMessage {
   fired_at: string;
 }
 
+import { DecisionUpdate } from "@/hooks/useRiskSocket";
+import { DecisionCard } from "./DecisionCard";
+import { Loader2 } from "lucide-react";
+
 interface Props {
   alertMsg: AlertMessage | null;
+  decisionMsg: DecisionUpdate | null;
 }
 
-export default function AlertBanner({ alertMsg }: Props) {
+export default function AlertBanner({ alertMsg, decisionMsg }: Props) {
   const [activeAlert, setActiveAlert] = useState<AlertMessage | null>(null);
 
   useEffect(() => {
@@ -57,6 +62,24 @@ export default function AlertBanner({ alertMsg }: Props) {
         <p className="text-xs text-gray-500 mt-2">
           Transitioned from {activeAlert.from_state} at {new Date(activeAlert.fired_at).toLocaleTimeString()}
         </p>
+
+        {isBreach && (
+          <div className="mt-4 border-t border-red-500/20 pt-4">
+            <h5 className="text-sm font-semibold text-gray-200 mb-3">Decision Engine (Advisory)</h5>
+            {!decisionMsg ? (
+              <div className="flex items-center gap-2 text-sm text-gray-400 p-4 bg-gray-900/50 rounded-lg border border-gray-800">
+                <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                Evaluating candidates via Monte Carlo simulation...
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {decisionMsg.candidates.map((candidate, idx) => (
+                  <DecisionCard key={idx} candidate={candidate} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <button

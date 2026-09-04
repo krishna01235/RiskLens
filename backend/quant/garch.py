@@ -8,10 +8,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from arch import arch_model
-
-# The minimum number of observations required for the GARCH solver to reliably converge.
-# If fewer returns are available, we fall back to simple historical standard deviation.
-MIN_GARCH_OBSERVATIONS = 20
+from backend.quant.constants import MIN_GARCH_OBSERVATIONS
 
 class GarchResult:
     def __init__(

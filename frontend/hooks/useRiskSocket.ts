@@ -20,6 +20,24 @@ export interface AlertMessage {
   fired_at: string;
 }
 
+export interface DecisionCandidate {
+  label: string;
+  expected_return: number;
+  cvar: number;
+  p_loss: number;
+  score: number;
+  is_fallback: boolean;
+}
+
+export interface DecisionUpdate {
+  type: "decision_update";
+  portfolio_id: string;
+  decision_id: string;
+  alert_id: string;
+  candidates: DecisionCandidate[];
+  created_at: string;
+}
+
 export interface RiskContribution {
   symbol: string;
   weight: number;
@@ -43,6 +61,7 @@ export interface RiskUpdate {
 export function useRiskSocket(portfolioId: string | null) {
   const [riskData, setRiskData] = useState<RiskUpdate | null>(null);
   const [alertMsg, setAlertMsg] = useState<AlertMessage | null>(null);
+  const [decisionMsg, setDecisionMsg] = useState<DecisionUpdate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ws = useRef<WebSocket | null>(null);
 
@@ -89,6 +108,10 @@ export function useRiskSocket(portfolioId: string | null) {
               setRiskData(data);
             } else if (data.type === "alert" && data.portfolio_id === portfolioId) {
               setAlertMsg(data);
+              // Clear old decision when a new alert fires
+              setDecisionMsg(null);
+            } else if (data.type === "decision_update" && data.portfolio_id === portfolioId) {
+              setDecisionMsg(data);
             }
           } catch (e) {
             console.error("WS parse error:", e);
@@ -126,5 +149,5 @@ export function useRiskSocket(portfolioId: string | null) {
     };
   }, [portfolioId]);
 
-  return { riskData, alertMsg, error };
+  return { riskData, alertMsg, decisionMsg, error };
 }

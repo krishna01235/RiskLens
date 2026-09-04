@@ -1,4 +1,4 @@
-﻿"""alerts/service.py -- Business logic for risk budgets and alerts.
+"""alerts/service.py -- Business logic for risk budgets and alerts.
 
 Ownership enforced on every operation:
   - Risk budget reads/writes scoped to portfolio owner.
@@ -109,3 +109,22 @@ async def get_alerts(
 
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+async def get_latest_decision(
+    db: AsyncSession,
+    portfolio_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> Decision | None:
+    """Return the latest decision generated for this portfolio."""
+    from app.alerts.models import Decision
+    await _assert_portfolio_owned(db, portfolio_id, user_id)
+    query = (
+        select(Decision)
+        .join(Alert, Alert.id == Decision.alert_id)
+        .where(Alert.portfolio_id == portfolio_id)
+        .order_by(Decision.created_at.desc())
+        .limit(1)
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none()

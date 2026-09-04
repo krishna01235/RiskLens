@@ -1,6 +1,6 @@
 # RiskLens Build Progress
 
-## Current Phase: 17 (not started)
+## Current Phase: 17 (complete)
 
 ## Phase Log
 | Phase | Status | Last Commit | Notes |
@@ -306,6 +306,42 @@ HMM Market Regime Detection.
 1. The regime badge shows a plausible, updating probability. — **PASS**
 2. A manually-injected synthetic high-volatility period in a test fixture correctly shifts the labeled "stressed" probability upward, proving the relabeling logic is correct rather than coincidentally correct. — **PASS**
 
-### Next Step (Phase 17)
-Decision Engine.
+## Phase 17 - Decision Engine (COMPLETE)
 
+**Completed:** 2026-09-04
+
+### Commits
+- `fc92b45` feat(quant): refactor constants and implement decision candidates generation
+- `12b4f9d` feat(risk): implement decision engine worker to generate and save decision candidates
+- `3e8e192` feat(ui): build DecisionCard and update AlertBanner for decisions pending state
+
+### Files Created / Modified
+**Backend:**
+- `backend/quant/constants.py`
+- `backend/quant/garch.py`
+- `backend/quant/evt.py`
+- `backend/app/alerts/schemas.py`
+- `backend/app/alerts/decisions_service.py`
+- `backend/workers/decision_engine_worker.py`
+- `backend/workers/utils.py`
+- `backend/workers/job_worker.py`
+- `backend/app/alerts/router.py`
+- `backend/app/alerts/service.py`
+- `backend/tests/test_decisions_service.py`
+- `docker-compose.yml`
+
+**Frontend:**
+- `frontend/components/dashboard/DecisionCard.tsx`
+- `frontend/components/dashboard/AlertBanner.tsx`
+- `frontend/hooks/useRiskSocket.ts`
+- `frontend/app/dashboard/page.tsx`
+
+### Acceptance Criteria
+1. Defined rule for omitting the "reduce largest risk contributor" candidate — **PASS**
+2. Added a per-candidate timeout on synchronous Monte Carlo evaluation — **PASS**
+3. `decision_engine_worker.py` reuses the exact same inputs as Phase 12's Monte Carlo — **PASS**
+4. Purely advisory constraint clearly documented — **PASS**
+5. UI displays "decisions pending" state in the Alert Banner — **PASS**
+
+### Next Step
+Project Complete.
