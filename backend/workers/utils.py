@@ -7,9 +7,10 @@ from typing import Tuple
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from redis.asyncio import Redis
 
-from app.portfolios.models import Portfolio
+from app.portfolios.models import Portfolio, Holding
 from quant.covariance import estimate_covariance, InsufficientDataError
 from quant.monte_carlo import SimulationParams
 from quant.returns import (
@@ -29,7 +30,9 @@ async def build_simulation_params(
     """Load holdings + price history to build SimulationParams."""
     import uuid
     portfolio_result = await db.execute(
-        select(Portfolio).where(Portfolio.id == uuid.UUID(portfolio_id))
+        select(Portfolio)
+        .options(selectinload(Portfolio.holdings))
+        .where(Portfolio.id == uuid.UUID(portfolio_id))
     )
     portfolio = portfolio_result.scalar_one_or_none()
     if portfolio is None:

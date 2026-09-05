@@ -25,7 +25,7 @@ test.describe("Journey 1 — Register → Onboarding → Dashboard", () => {
     await page.getByLabel(/email/i).fill(email);
     await page.getByLabel(/^password$/i).fill(password);
 
-    // Some forms have a confirm password field
+    // Confirm password field
     const confirmField = page.getByLabel(/confirm password/i);
     if (await confirmField.isVisible()) {
       await confirmField.fill(password);
@@ -33,47 +33,47 @@ test.describe("Journey 1 — Register → Onboarding → Dashboard", () => {
 
     await page.getByRole("button", { name: /register|sign up|create account/i }).click();
 
-    // ── Step 3: Expect redirect to dashboard or onboarding ───────────────────
-    await page.waitForURL(/dashboard|onboarding/, { timeout: 15_000 });
+    // ── Step 3: Wait for onboarding page ─────────────────────────────────────
+    // Register redirects to /dashboard (no portfolio) → dashboard immediately
+    // redirects to /onboarding because the user has no portfolio yet.
+    // We wait for /onboarding to settle rather than /dashboard.
+    await page.waitForURL(/onboarding/, { timeout: 20_000 });
 
-    // ── Step 4: If onboarding page, click "Demo Portfolio" CTA ───────────────
-    if (page.url().includes("onboarding") || page.url().includes("dashboard")) {
-      // Look for a demo / get started button
-      const demoBtn = page.getByRole("button", {
-        name: /demo|get started|load demo/i,
-      });
-      if (await demoBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-        await demoBtn.click();
-        // Wait for dashboard to load with actual data
-        await page.waitForURL(/dashboard/, { timeout: 15_000 });
-      }
-    }
+    // ── Step 4: Click "Try Demo" on onboarding page ───────────────────────────
+    const demoBtn = page.getByRole("button", {
+      name: /try demo/i,
+    });
+    await expect(demoBtn).toBeVisible({ timeout: 10_000 });
+    await demoBtn.click();
 
-    // ── Step 5 & 6: Dashboard must show content ────────────────────────────────
-    // New portfolios may take up to 60s for the slow-path worker to compute.
-    // Wait for network to settle before checking content (ensures hydration done).
-    await page.waitForLoadState("networkidle").catch(() => {});
+    // ── Step 5: Wait for dashboard after demo portfolio creation ──────────────
+    // POST /portfolios/demo can take a few seconds; allow 20s.
+    await page.waitForURL(/dashboard/, { timeout: 20_000 });
 
-    // Fast checks: pending spinner text always present on a new portfolio
-    const waitingText = page.getByText(/waiting for market data/i).first();
-    const pendingText = page.getByText(/risk metrics compute/i).first();
-    const metricText = page.getByText(/var|volatility|sharpe|drawdown/i).first();
-    const dashHeader = page.getByRole("heading", { name: /risk dashboard/i }).first();
-    const metricCard = page
-      .locator('[data-testid="metric-card"], .metric-card, [class*="MetricCard"]')
+    // ── Step 6: Dashboard must show the Risk Dashboard heading ────────────────
+    // The heading is always rendered regardless of whether the slow-path worker
+    // has computed risk metrics yet — it is a reliable presence signal.
+    const dashHeader = page
+      .getByRole("heading", { name: /risk dashboard/i })
       .first();
 
-    // Try fast checks first (10s each), then fall back to 60s metric wait
-    const hasFastContent =
-      (await dashHeader.isVisible({ timeout: 10_000 }).catch(() => false)) ||
-      (await waitingText.isVisible({ timeout: 5_000 }).catch(() => false)) ||
-      (await pendingText.isVisible({ timeout: 2_000 }).catch(() => false)) ||
-      (await metricText.isVisible({ timeout: 2_000 }).catch(() => false));
+    const hasDashboardContent =
+      await dashHeader.isVisible({ timeout: 20_000 }).catch(() => false);
 
-    const hasContent = hasFastContent ||
-      (await metricCard.isVisible({ timeout: 60_000 }).catch(() => false)) ||
-      (await metricText.isVisible({ timeout: 5_000 }).catch(() => false));
+    // Fallback: also accept any metric card or waiting-for-data text
+    if (!hasDashboardContent) {
+      const waitingText = page.getByText(/waiting for market data/i).first();
+      const metricCard = page
+        .locator('[data-testid="metric-card"], .metric-card, [class*="MetricCard"]')
+        .first();
+      const fallbackVisible =
+        (await waitingText.isVisible({ timeout: 10_000 }).catch(() => false)) ||
+        (await metricCard.isVisible({ timeout: 10_000 }).catch(() => false));
 
-    expect(hasContent, "Dashboard should show content (metrics or pending state)").toBe(true);
+      expect(
+        fallbackVisible,
+        "Dashboard should show 'Risk Dashboard' heading or metric content after demo portfolio creation"
+      ).toBe(true);
+    }
   });
 });
