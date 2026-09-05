@@ -27,8 +27,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import get_settings
+# Import all models that Portfolio has string-referenced relationships to,
+# so SQLAlchemy mapper can resolve them at initialization time.
+import app.alerts.models  # noqa: F401 — registers Alert
+import app.risk.models  # noqa: F401 — registers RiskSnapshot
+import app.simulations.models as _sim_models  # noqa: F401 — registers Simulation
+import app.replays.models  # noqa: F401 — registers Replay
+import app.ai.models  # noqa: F401 — registers AiConversation
 from app.portfolios.models import Portfolio
-from app.risk.models import RiskSnapshot  # noqa: F401 — must be imported to register the mapper
 from app.simulations.models import Simulation
 from app.simulations.schemas import SimulationResultPayload
 from app.simulations import service as sim_service

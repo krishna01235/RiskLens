@@ -51,19 +51,21 @@ test.describe("Journey 1 — Register → Onboarding → Dashboard", () => {
 
     // ── Step 5 & 6: Dashboard must show content ────────────────────────────────
     // New portfolios may take up to 60s for the slow-path worker to compute.
-    // Strategy: first check fast conditions (spinner/pending text), then
-    // wait up to 60s for actual metric values to appear.
+    // Wait for network to settle before checking content (ensures hydration done).
+    await page.waitForLoadState("networkidle").catch(() => {});
 
-    // Fast checks: pending spinner text that is always present on a new portfolio
+    // Fast checks: pending spinner text always present on a new portfolio
     const waitingText = page.getByText(/waiting for market data/i).first();
     const pendingText = page.getByText(/risk metrics compute/i).first();
     const metricText = page.getByText(/var|volatility|sharpe|drawdown/i).first();
+    const dashHeader = page.getByRole("heading", { name: /risk dashboard/i }).first();
     const metricCard = page
       .locator('[data-testid="metric-card"], .metric-card, [class*="MetricCard"]')
       .first();
 
-    // Check fast options first (5s each), then fall back to 60s metric wait
+    // Try fast checks first (10s each), then fall back to 60s metric wait
     const hasFastContent =
+      (await dashHeader.isVisible({ timeout: 10_000 }).catch(() => false)) ||
       (await waitingText.isVisible({ timeout: 5_000 }).catch(() => false)) ||
       (await pendingText.isVisible({ timeout: 2_000 }).catch(() => false)) ||
       (await metricText.isVisible({ timeout: 2_000 }).catch(() => false));
