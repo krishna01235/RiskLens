@@ -27,6 +27,7 @@ from app.portfolios.router import portfolios_router
 from app.risk.router import risk_router
 from app.alerts.router import alerts_router
 from app.simulations.router import simulations_router
+from app.slack.router import slack_router
 from app.ws.router import router as ws_router
 
 settings = get_settings()
@@ -64,6 +65,7 @@ app.include_router(simulations_router)
 app.include_router(ws_router)
 app.include_router(ai_router)
 app.include_router(replays_router)
+app.include_router(slack_router)
 
 
 # ── Utility endpoints ─────────────────────────────────────────────────────────
