@@ -1,9 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import SimulationForm from "@/components/simulation/SimulationForm";
 import SimulationProgress from "@/components/simulation/SimulationProgress";
 import SimulationResults from "@/components/simulation/SimulationResults";
+import AppShell from "@/components/layout/AppShell";
+import Button from "@/components/ui/Button";
 
 type SimStatus = "idle" | "pending" | "running" | "complete" | "failed";
 
@@ -41,7 +43,6 @@ export default function SimulatePage() {
     }
   }, []);
 
-  // Poll GET /simulations/{id} every 2s until terminal state
   const startPolling = useCallback(
     (id: string) => {
       stopPolling();
@@ -67,24 +68,20 @@ export default function SimulatePage() {
             setStatus("running");
           }
         } catch {
-          // transient network error -- keep polling
+          // transient network error — keep polling
         }
       }, 2000);
     },
-    [stopPolling]
+    [stopPolling],
   );
-
-  // WS progress listener
-  useEffect(() => {
-    if (!simId || status === "complete" || status === "failed") return;
-    // Progress updates via WS are handled in useRiskSocket;
-    // for the simulation we additionally listen here if a WS ticket is available.
-    // For MVP: polling (startPolling) is the primary mechanism.
-  }, [simId, status]);
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  const handleRun = async (portfolioId: string, horizonDays: number, numPaths: number) => {
+  const handleRun = async (
+    portfolioId: string,
+    horizonDays: number,
+    numPaths: number,
+  ) => {
     setStatus("pending");
     setProgress(0);
     setResult(null);
@@ -98,7 +95,11 @@ export default function SimulatePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ portfolio_id: portfolioId, horizon_days: horizonDays, num_paths: numPaths }),
+        body: JSON.stringify({
+          portfolio_id: portfolioId,
+          horizon_days: horizonDays,
+          num_paths: numPaths,
+        }),
       });
 
       if (resp.status === 429) {
@@ -108,7 +109,9 @@ export default function SimulatePage() {
       }
       if (resp.status === 409) {
         setStatus("failed");
-        setErrorMsg("A simulation is already running for this portfolio. Please wait.");
+        setErrorMsg(
+          "A simulation is already running for this portfolio. Please wait.",
+        );
         return;
       }
       if (!resp.ok) {
@@ -122,53 +125,70 @@ export default function SimulatePage() {
       setSimId(data.id);
       setStatus("pending");
       startPolling(data.id);
-    } catch (e) {
+    } catch {
       setStatus("failed");
       setErrorMsg("Network error. Please try again.");
     }
   };
 
-  return (
-    <main className="min-h-screen bg-[#0d1117] text-white px-6 py-10 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-        Monte Carlo Simulation
-      </h1>
-      <p className="text-gray-400 mb-8 text-sm">
-        Run a vectorized GBM simulation with Cholesky-correlated shocks, GARCH volatility, and antithetic variates.
-      </p>
+  const isRunning = status === "pending" || status === "running";
 
+  return (
+    <AppShell>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-brand-primary tracking-tight">
+          Monte Carlo Simulation
+        </h1>
+        <p className="text-xs text-brand-tertiary mt-1">
+          Vectorised GBM with Cholesky-correlated shocks, GARCH volatility, and antithetic variates.
+        </p>
+      </div>
+
+      {/* Form */}
       {(status === "idle" || status === "complete" || status === "failed") && (
-        <SimulationForm onRun={handleRun} disabled={status === "pending" || status === "running"} />
+        <SimulationForm onRun={handleRun} disabled={isRunning} />
       )}
 
-      {(status === "pending" || status === "running") && (
+      {/* Progress */}
+      {isRunning && (
         <SimulationProgress progress={progress} status={status} />
       )}
 
+      {/* Error state */}
       {status === "failed" && errorMsg && (
-        <div className="mt-6 p-4 bg-red-900/40 border border-red-500/50 rounded-xl text-red-300">
-          <p className="font-semibold mb-1">Simulation failed</p>
-          <p className="text-sm">{errorMsg}</p>
-          <button
-            onClick={() => setStatus("idle")}
-            className="mt-3 text-xs text-red-400 underline hover:text-red-300"
-          >
-            Try again
-          </button>
+        <div className="mt-6 flex items-start gap-0 overflow-hidden rounded-lg border border-brand-breach/30 bg-brand-elevated">
+          <div className="w-1 self-stretch shrink-0 bg-brand-breach" />
+          <div className="flex flex-col gap-2 px-4 py-3">
+            <p className="text-sm font-semibold text-brand-primary">
+              Simulation failed
+            </p>
+            <p className="text-sm text-brand-secondary">{errorMsg}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatus("idle")}
+              className="self-start"
+            >
+              Try again
+            </Button>
+          </div>
         </div>
       )}
 
+      {/* Results */}
       {status === "complete" && result && (
         <>
           <SimulationResults result={result} />
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => { setStatus("idle"); setResult(null); }}
-            className="mt-6 text-sm text-gray-400 underline hover:text-gray-300"
+            className="mt-4"
           >
             Run another simulation
-          </button>
+          </Button>
         </>
       )}
-    </main>
+    </AppShell>
   );
 }
