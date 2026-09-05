@@ -14,7 +14,7 @@ from typing import Optional
 
 import numpy as np
 from scipy.stats import genpareto
-from backend.quant.constants import MIN_EVT_EXCEEDANCES
+from quant.constants import MIN_EVT_EXCEEDANCES
 
 
 @dataclass(frozen=True)

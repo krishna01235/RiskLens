@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from arch import arch_model
-from backend.quant.constants import MIN_GARCH_OBSERVATIONS
+from quant.constants import MIN_GARCH_OBSERVATIONS
 
 class GarchResult:
     def __init__(
