@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_current_user, get_current_user_any
 from app.alerts import service
 from app.alerts.schemas import (
     AlertListResponse,
@@ -66,7 +66,7 @@ async def list_alerts(
     cursor: datetime | None = Query(default=None, description="ISO datetime for keyset pagination"),
     limit: int = Query(default=50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),  # noqa: B008
-    current_user: User = Depends(get_current_user),  # noqa: B008
+    current_user: User = Depends(get_current_user_any("read")),  # noqa: B008
 ) -> AlertListResponse:
     """Cursor-paginated alert list scoped to the requesting user."""
     items = await service.get_alerts(

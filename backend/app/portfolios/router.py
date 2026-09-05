@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.database import get_db
-from app.deps import get_current_user, get_redis
+from app.deps import get_current_user, get_current_user_any, get_redis
 from redis.asyncio import Redis
 from app.portfolios import service
 from app.portfolios.schemas import (
@@ -135,7 +135,7 @@ async def delete_holding(
 @portfolios_router.get("", response_model=list[PortfolioOut])
 async def list_portfolios(
     db: AsyncSession = Depends(get_db),  # noqa: B008
-    current_user: User = Depends(get_current_user),  # noqa: B008
+    current_user: User = Depends(get_current_user_any("read")),  # noqa: B008
 ) -> list[PortfolioOut]:
     """Return all portfolios for the current user."""
     portfolios = await service.get_user_portfolios(db, current_user.id)

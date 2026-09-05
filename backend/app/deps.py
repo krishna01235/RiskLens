@@ -79,3 +79,63 @@ async def get_current_user(
         raise credentials_exception
 
     return user
+
+
+def get_current_user_any(required_scope: str):
+    """Return a FastAPI dependency that accepts *either* a JWT bearer token
+    or a scoped API token carrying ``required_scope``.
+
+    Strategy (tried in order):
+    1. Try to decode the bearer value as a JWT access token.
+       If that succeeds the caller is an authenticated web-dashboard user —
+       no scope restriction applies (matches existing ``get_current_user``
+       behaviour exactly).
+    2. If JWT decoding fails, try the same bearer value as a raw API token
+       and validate that it carries ``required_scope``.
+       - Valid token, wrong scope  → HTTP 403
+       - Missing / revoked token   → HTTP 401
+
+    Only the four Slack-bot-facing routes use this dependency.
+    Every other endpoint keeps ``get_current_user`` unchanged.
+
+    Usage::
+
+        @router.get("/portfolios")
+        async def list_portfolios(
+            current_user: User = Depends(get_current_user_any("read")),
+        ): ...
+    """
+    from app.auth import service as auth_service  # avoid circular at module level
+
+    async def _dependency(
+        token: str | None = Depends(_oauth2_scheme),  # noqa: B008
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+    ) -> User:
+        if token is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Could not validate credentials.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # ── Path 1: JWT ────────────────────────────────────────────────────────
+        try:
+            user_id = decode_access_token(token)
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            if user is not None:
+                return user  # JWT path — no scope check needed
+        except (JWTError, ValueError):
+            pass  # fall through to API token path
+
+        # ── Path 2: API token ──────────────────────────────────────────────────
+        try:
+            return await auth_service.validate_api_token(db, token, required_scope)
+        except auth_service.AuthError as exc:
+            raise HTTPException(
+                status_code=exc.status_code,
+                detail=str(exc),
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+    return _dependency

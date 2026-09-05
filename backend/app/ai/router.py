@@ -22,7 +22,7 @@ from app.ai.schemas import (
 )
 from app.auth.models import User
 from app.database import get_db
-from app.deps import get_current_user, get_redis, limiter
+from app.deps import get_current_user, get_current_user_any, get_redis, limiter
 
 ai_router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -52,7 +52,7 @@ async def what_if(
     request: Request,
     db: AsyncSession = Depends(get_db),  # noqa: B008
     redis=Depends(get_redis),  # noqa: B008
-    current_user: User = Depends(get_current_user),  # noqa: B008
+    current_user: User = Depends(get_current_user_any("whatif")),  # noqa: B008
 ) -> WhatIfResponse:
     """Evaluate a natural-language what-if question (30/hour/IP rate limit).
 
