@@ -35,6 +35,8 @@ dependencies = [
     "langchain-anthropic>=0.2",
     "langchain-core>=0.2",
     "scipy>=1.10",
+    "slack-bolt>=1.18",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]

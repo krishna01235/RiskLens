@@ -215,6 +215,28 @@ services:
     networks:
       - risklens
 
+  # ── Slack Bot (Phase 21) ──────────────────────────────────────────────────────
+  slack_bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    command: ["python", "-m", "slack_bot.app"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-risklens}:${POSTGRES_PASSWORD:-risklens}@postgres:5432/${POSTGRES_DB:-risklens}
+      REDIS_URL: redis://redis:6379/0
+      RISKLENS_API_URL: http://api:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - risklens
+
 # ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:
   postgres_data:
