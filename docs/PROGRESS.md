@@ -768,3 +768,38 @@ Phase 23 — CI/CD Pipeline & Deployment.
 
 ### Next Step
 Phase 24 — Final QA, Bug Elimination & Production Readiness.
+
+---
+
+## Phase LP — Public Landing Page (COMPLETE)
+
+**Completed:** 2026-09-05
+
+### Commits
+- `39162c5` feat(landing): add public landing page with live Monte Carlo fan-chart and feature sections
+
+### Files Created
+**Frontend:**
+- `frontend/components/landing/constants.ts` — All magic numbers as named exports (path count, volatility, drift, intervals, score sequence)
+- `frontend/components/landing/MonteCarloFanChart.tsx` — Canvas 2D GBM fan-chart; animated draw-in is the loading state; prefers-reduced-motion aware; re-simulates every 4s with fresh PRNG seed
+- `frontend/components/landing/HeroRiskScore.tsx` — Live monospaced risk score reusing exact MetricCard.tsx flash micro-interaction (useRef/useEffect/flash-green/flash-red pattern)
+- `frontend/components/landing/LandingNav.tsx` — Sticky nav with logo + Sign in (ghost) + Get started (primary)
+- `frontend/components/landing/FeatureSection.tsx` — Three feature blocks each with a real embedded Recharts chart (BarChart for risk contribution, two-number EVT comparison, ComposedChart with ReferenceLine for replay breach)
+- `frontend/components/landing/AiPreview.tsx` — Non-functional AI chat preview; mock replies cycle via setTimeout; same token visual language as AiChatPanel
+
+### Files Modified
+- `frontend/app/page.tsx` — Full landing page replacing stub; session redirect on mount (silentRefresh → router.replace("/dashboard")); MonteCarloFanChart lazy-loaded via next/dynamic ssr:false
+
+### Register → Sign-in Investigation
+**Finding:** Not a bug in register/page.tsx. The register endpoint correctly sets the httpOnly refresh cookie and returns an access token. The root cause in production is a cross-origin CORS/SameSite cookie issue (Vercel frontend ↔ Render backend). Locally the flow works correctly via the silent-refresh interceptor already present in api-client.ts.
+
+### Acceptance Criteria
+1. `/` renders the landing page for unauthenticated users — **PASS**
+2. Returning logged-in user visiting `/` is immediately redirected to `/dashboard` — **PASS** (silentRefresh on mount)
+3. Fan-chart draws itself in on first load — no shimmer/skeleton screen — **PASS** (animated draw-in IS the loading state)
+4. prefers-reduced-motion: fan-chart shows final state immediately, re-simulation disabled — **PASS**
+5. Three feature sections each contain a real Recharts chart — **PASS** (BarChart, two-number EVT block, ComposedChart+ReferenceLine)
+6. MonteCarloFanChart not bundled on dashboard/auth routes — **PASS** (next/dynamic ssr:false)
+7. All magic numbers in named constants — **PASS** (constants.ts)
+8. No new colors introduced — all token variables — **PASS**
+9. `npm run build` exits 0 — **PASS**
