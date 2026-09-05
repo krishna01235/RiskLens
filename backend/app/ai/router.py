@@ -28,6 +28,7 @@ ai_router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 @ai_router.post("/explain", response_model=ExplainResponse)
+@limiter.limit("30/hour")
 async def explain_risk(
     req: ExplainRequest,
     request: Request,
@@ -35,7 +36,10 @@ async def explain_risk(
     redis=Depends(get_redis),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> ExplainResponse:
-    """Explain the current risk state for a portfolio in plain language."""
+    """Explain the current risk state for a portfolio in plain language.
+
+    Rate limited to 30 requests per hour per IP (matches /ai/what-if).
+    """
     return await service.run_explain(
         db=db,
         redis=redis,

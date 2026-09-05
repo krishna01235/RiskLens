@@ -11,12 +11,12 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.database import get_db
-from app.deps import get_current_user, get_current_user_any
+from app.deps import get_current_user, get_current_user_any, limiter
 from app.alerts import service
 from app.alerts.schemas import (
     AlertListResponse,
@@ -33,13 +33,18 @@ alerts_router = APIRouter(tags=["alerts"])
     "/portfolios/{portfolio_id}/risk-budget",
     response_model=RiskBudgetResponse,
 )
+@limiter.limit("30/minute")
 async def upsert_risk_budget(
     portfolio_id: uuid.UUID,
     req: RiskBudgetUpsertRequest,
+    request: Request,  # noqa: ARG001  # required by slowapi
     db: AsyncSession = Depends(get_db),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> RiskBudgetResponse:
-    """Create or update the risk budget thresholds for a portfolio."""
+    """Create or update the risk budget thresholds for a portfolio.
+
+    Rate limited to 30 requests per minute per IP.
+    """
     budget = await service.upsert_risk_budget(db, portfolio_id, current_user.id, req)
     return RiskBudgetResponse.model_validate(budget)
 

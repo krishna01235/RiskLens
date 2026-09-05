@@ -69,6 +69,16 @@ class Settings(BaseSettings):
         description="Allowed CORS origins. Add the deployed frontend URL in production.",
     )
 
+    # ── Cookie ─────────────────────────────────────────────────────────────────
+    cookie_secure: bool = Field(
+        default=False,
+        description=(
+            "Set to True in production (HTTPS). "
+            "Controls the Secure flag on the httpOnly refresh token cookie. "
+            "Set via COOKIE_SECURE=true environment variable."
+        ),
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

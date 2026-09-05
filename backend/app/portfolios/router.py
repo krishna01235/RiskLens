@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.database import get_db
-from app.deps import get_current_user, get_current_user_any, get_redis
+from app.deps import get_current_user, get_current_user_any, get_redis, limiter
 from redis.asyncio import Redis
 from app.portfolios import service
 from app.portfolios.schemas import (
@@ -34,8 +34,10 @@ portfolios_router = APIRouter(tags=["portfolios"])
 
 
 @portfolios_router.post("/demo", response_model=PortfolioOut, status_code=201)
+@limiter.limit("3/minute")
 async def create_demo_portfolio(
     market: DemoMarket = Query(default=DemoMarket.us),
+    request: Request = None,  # noqa: ARG001  # required by slowapi
     db: AsyncSession = Depends(get_db),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> PortfolioOut:
@@ -43,6 +45,7 @@ async def create_demo_portfolio(
 
     Idempotent: calling this endpoint twice with the same market returns the
     existing demo portfolio without creating a duplicate.
+    Rate limited to 3 requests per minute per IP.
     """
     portfolio = await service.create_demo_portfolio(db, current_user.id, market)
     return PortfolioOut.model_validate(portfolio)
@@ -52,14 +55,17 @@ async def create_demo_portfolio(
 
 
 @portfolios_router.post("/import/preview", response_model=CsvPreviewResponse)
+@limiter.limit("10/minute")
 async def csv_preview(
     file: UploadFile = File(...),
+    request: Request = None,  # noqa: ARG001  # required by slowapi
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> CsvPreviewResponse:
     """Accept a CSV upload and return a suggested column mapping + row preview.
 
     No database write occurs at this step — the user must call /import/confirm
     after reviewing (and optionally correcting) the mapping.
+    Rate limited to 10 requests per minute per IP.
     """
     if file.content_type not in ("text/csv", "application/vnd.ms-excel", "text/plain"):
         # Be lenient — some OS / browsers report text/plain for .csv
@@ -76,8 +82,10 @@ async def csv_preview(
 
 
 @portfolios_router.post("/import/confirm", response_model=PortfolioOut, status_code=201)
+@limiter.limit("5/minute")
 async def csv_confirm(
     req: CsvConfirmRequest,
+    request: Request = None,  # noqa: ARG001  # required by slowapi
     db: AsyncSession = Depends(get_db),  # noqa: B008
     redis: Redis = Depends(get_redis),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
@@ -85,6 +93,7 @@ async def csv_confirm(
     """Confirm the mapping and import all rows as a new portfolio.
 
     Returns 422 with per-row details if any row fails validation.
+    Rate limited to 5 requests per minute per IP.
     """
     portfolio = await service.confirm_csv_import(db, redis, current_user.id, req)
     return PortfolioOut.model_validate(portfolio)

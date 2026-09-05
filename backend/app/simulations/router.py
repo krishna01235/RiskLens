@@ -1,4 +1,4 @@
-﻿"""simulations/router.py -- POST /simulations, GET /simulations/{id}."""
+"""simulations/router.py -- POST /simulations, GET /simulations/{id}."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ import uuid
 
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.config import get_settings
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_current_user, limiter
 from app.simulations import service
 from app.simulations.schemas import SimulationCreateRequest, SimulationResponse
 
@@ -21,8 +21,10 @@ _settings = get_settings()
 
 
 @simulations_router.post("", response_model=SimulationResponse, status_code=202)
+@limiter.limit("10/hour")
 async def create_simulation(
     req: SimulationCreateRequest,
+    request: Request,  # noqa: ARG001  # required by slowapi
     db: AsyncSession = Depends(get_db),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> SimulationResponse:
@@ -30,6 +32,7 @@ async def create_simulation(
 
     Returns 202 Accepted with status=pending immediately.
     Poll GET /simulations/{id} or listen for WS simulation_progress messages.
+    Rate limited to 10 requests per hour per IP.
     """
     sim = await service.create_simulation(db, req, current_user.id)
 

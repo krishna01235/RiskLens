@@ -6,13 +6,13 @@ import uuid
 
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.config import get_settings
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_current_user, limiter
 from app.replays import service
 from app.replays.schemas import CreateReplayRequest, ReplayResponse
 
@@ -21,8 +21,10 @@ _settings = get_settings()
 
 
 @replays_router.post("", response_model=ReplayResponse, status_code=202)
+@limiter.limit("5/hour")
 async def create_replay(
     req: CreateReplayRequest,
+    request: Request,  # noqa: ARG001  # required by slowapi
     db: AsyncSession = Depends(get_db),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> ReplayResponse:
@@ -30,6 +32,7 @@ async def create_replay(
 
     Returns 202 Accepted with status=pending immediately.
     Poll GET /replays/{id} for progress.
+    Rate limited to 5 requests per hour per IP.
     """
     replay = await service.create_replay(db, req, current_user.id)
 
