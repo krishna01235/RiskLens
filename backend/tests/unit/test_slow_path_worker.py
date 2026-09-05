@@ -116,21 +116,21 @@ def _holdings(*symbols: str) -> list[Holding]:
 class TestComputeRiskFromHistory:
     def test_ready_path_produces_metrics(self) -> None:
         history = _make_history(["AAPL", "MSFT"], n_days=60)
-        status, estimate, estimator = compute_risk_from_history(
+        status, estimate, clusters = compute_risk_from_history(
             history, _holdings("AAPL", "MSFT")
         )
         assert status == "ready"
-        assert estimator == "ledoit_wolf"
+        assert isinstance(clusters, list)
         assert estimate is not None
         assert estimate.var_95 > 0
         assert estimate.cvar_95 >= estimate.var_95
         assert estimate.n_obs >= 30
 
     def test_no_history_returns_insufficient(self) -> None:
-        status, estimate, estimator = compute_risk_from_history({}, _holdings("AAPL"))
+        status, estimate, clusters = compute_risk_from_history({}, _holdings("AAPL"))
         assert status == "insufficient_data"
         assert estimate is None
-        assert estimator is None
+        assert clusters is None
 
     def test_single_day_returns_insufficient(self) -> None:
         history = _make_history(["AAPL"], n_days=1)
