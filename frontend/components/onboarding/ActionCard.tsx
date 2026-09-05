@@ -1,45 +1,42 @@
-"use client";
+/**
+ * ActionCard.tsx — Onboarding path selection card, migrated to tokens.
+ */
 
+import Card from "@/components/ui/Card";
 import { ReactNode } from "react";
 
 interface ActionCardProps {
   title: string;
   description: string;
   icon: ReactNode;
-  variant: "demo" | "csv" | "manual";
+  variant?: "demo" | "csv" | "manual";
   onClick: () => void;
 }
+
+const ACCENT_BORDER: Record<string, string> = {
+  demo:   "hover:border-brand-accent/50",
+  csv:    "hover:border-brand-accent/40",
+  manual: "hover:border-brand-accent/30",
+};
 
 export default function ActionCard({
   title,
   description,
   icon,
-  variant,
+  variant = "demo",
   onClick,
 }: ActionCardProps) {
-  const variantStyles = {
-    demo: "border-blue-500/30 hover:border-blue-500 hover:shadow-blue-500/20",
-    csv: "border-violet-500/30 hover:border-violet-500 hover:shadow-violet-500/20",
-    manual: "border-teal-500/30 hover:border-teal-500 hover:shadow-teal-500/20",
-  };
-
-  const accentColors = {
-    demo: "bg-blue-500",
-    csv: "bg-violet-500",
-    manual: "bg-teal-500",
-  };
-
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`group relative flex w-full flex-col items-start rounded-xl border bg-slate-900/50 p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${variantStyles[variant]}`}
+      className={`w-full text-left rounded-lg border border-brand-border bg-brand-elevated p-6 transition-colors duration-fast hover:bg-brand-hover ${ACCENT_BORDER[variant] ?? ""} focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-accent)]`}
     >
-      <div
-        className={`absolute left-0 top-0 h-full w-1 rounded-l-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${accentColors[variant]}`}
-      />
-      <div className="mb-4 text-3xl">{icon}</div>
-      <h3 className="mb-2 text-lg font-semibold text-slate-100">{title}</h3>
-      <p className="text-sm text-slate-400">{description}</p>
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-accent/10">
+        {icon}
+      </div>
+      <h3 className="text-sm font-semibold text-brand-primary">{title}</h3>
+      <p className="mt-1 text-xs text-brand-tertiary leading-relaxed">{description}</p>
     </button>
   );
 }
