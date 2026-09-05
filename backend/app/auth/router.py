@@ -8,12 +8,24 @@ Cookie spec (refresh_token):
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import service
-from app.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
+from app.auth.constants import ALLOWED_SCOPES, ONE_TIME_CODE_TTL_SECONDS
+from app.auth.models import User
+from app.auth.schemas import (
+    ApiTokenCreateRequest,
+    ApiTokenResponse,
+    LoginRequest,
+    OneTimeCodeResponse,
+    RegisterRequest,
+    TokenResponse,
+)
 from app.database import get_db
+from app.deps import get_current_user, get_redis, limiter
 
 router = APIRouter(tags=["auth"])
 
@@ -136,3 +148,87 @@ async def logout(
     if refresh_token_cookie is not None:
         await service.logout(db, refresh_token_cookie)
     _clear_refresh_cookie(response)
+
+
+# ── POST /auth/api-tokens ──────────────────────────────────────────────────────
+
+
+@router.post("/api-tokens", response_model=ApiTokenResponse, status_code=201)
+@limiter.limit("5/minute")
+async def create_api_token(
+    body: ApiTokenCreateRequest,
+    request: Request,  # noqa: ARG001  # required by slowapi
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
+) -> ApiTokenResponse:
+    """Issue a new scoped API token for the authenticated user.
+
+    The ``raw_token`` field is returned **once only** — it cannot be retrieved
+    again after this response.  Store it securely immediately.
+
+    Allowed scopes: ``read``, ``whatif``.
+    Rate limited to 5 requests per minute.
+    """
+    try:
+        raw_token, record = await service.create_api_token(
+            db, current_user.id, body.scopes
+        )
+    except service.AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    return ApiTokenResponse(
+        id=record.id,
+        raw_token=raw_token,
+        scopes=record.scopes,
+        created_at=record.created_at,
+    )
+
+
+# ── DELETE /auth/api-tokens/{token_id} ────────────────────────────────────────
+
+
+@router.delete("/api-tokens/{token_id}", status_code=204)
+async def revoke_api_token(
+    token_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
+) -> None:
+    """Revoke a previously issued API token.
+
+    403 if the token belongs to another user; 404 if not found.
+    """
+    try:
+        await service.revoke_api_token(db, token_id, current_user.id)
+    except service.AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+# ── POST /auth/api-tokens/one-time-code ───────────────────────────────────────
+
+
+@router.post(
+    "/api-tokens/one-time-code",
+    response_model=OneTimeCodeResponse,
+    status_code=201,
+)
+@limiter.limit("10/minute")
+async def create_one_time_code(
+    request: Request,  # noqa: ARG001  # required by slowapi
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    redis=Depends(get_redis),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
+) -> OneTimeCodeResponse:
+    """Generate a short-lived one-time code for the Slack bot login flow.
+
+    The user pastes this code into Slack via ``/risklens login <code>``.
+    The code expires after {ttl}s and is single-use.
+
+    Rate limited to 10 requests per minute.
+    """.format(ttl=ONE_TIME_CODE_TTL_SECONDS)
+    # Issue token with both scopes so the Slack bot can call all its endpoints.
+    scopes = sorted(ALLOWED_SCOPES)
+    code = await service.create_one_time_code(redis, current_user.id, scopes)
+    return OneTimeCodeResponse(
+        code=code,
+        expires_in_seconds=ONE_TIME_CODE_TTL_SECONDS,
+    )
