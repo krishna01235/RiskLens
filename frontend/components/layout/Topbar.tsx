@@ -23,7 +23,7 @@ interface TopbarProps {
 export default function Topbar({ sidebarWidth, wsConnected = true }: TopbarProps) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const clear = useAuthStore((s) => s.clear);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   async function handleLogout() {
@@ -32,7 +32,7 @@ export default function Topbar({ sidebarWidth, wsConnected = true }: TopbarProps
     } catch {
       // ignore errors — log out locally regardless
     }
-    clearAuth();
+    clear();
     router.push("/login");
   }
 

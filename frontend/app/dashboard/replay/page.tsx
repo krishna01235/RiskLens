@@ -340,9 +340,13 @@ export default function ReplayPage() {
                     color: "var(--color-text-primary)",
                     fontSize: "12px",
                   }}
-                  labelFormatter={(val) => new Date(val).toLocaleDateString()}
-                  formatter={(val: number, name: string) => [
-                    `${(val * 100).toFixed(2)}%`,
+                  labelFormatter={(val: string | number) =>
+                    typeof val === "string" || typeof val === "number"
+                      ? new Date(val).toLocaleDateString()
+                      : String(val)
+                  }
+                  formatter={(val: number | string | undefined, name: string) => [
+                    typeof val === "number" ? `${(val * 100).toFixed(2)}%` : String(val ?? ""),
                     name === "var_95"
                       ? "95% VaR"
                       : name === "actual_loss"

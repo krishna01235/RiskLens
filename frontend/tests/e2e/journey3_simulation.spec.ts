@@ -59,7 +59,12 @@ test.describe("Journey 3 — Monte Carlo Simulation", () => {
     // Select 10K paths (smallest, fastest) if a selector is present
     const pathsSelect = page.locator("select").first();
     if (await pathsSelect.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await pathsSelect.selectOption({ label: /10.?000|10k/i });
+      await pathsSelect.selectOption({ label: "10,000" }).catch(async () => {
+        // Fallback: try '10000' without comma formatting
+        await pathsSelect.selectOption({ label: "10000" }).catch(() => {
+          // Leave default if neither option text matches — simulation will still run
+        });
+      });
     }
 
     // Submit the form
