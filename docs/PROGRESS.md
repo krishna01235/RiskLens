@@ -692,4 +692,51 @@ Phase 21 — Slack Bot Second Client.
 8. Rate limiting on new endpoints — **PASS** (5/min api-tokens, 10/min OTC, 10/min /slack/link)
 
 ### Next Step
-Phase 22 (if any) or project wrap-up.
+Phase 22 — Testing Hardening & Security Pass.
+
+---
+
+## Phase 22 — Testing Hardening & Security Pass (COMPLETE)
+
+**Completed:** 2026-09-05
+
+### Commits
+- `cd699e3` test(e2e): add Playwright config and five critical user journey tests
+- `cd6475a` chore(security): complete rate limiting on all state-changing endpoints
+- `e25f4b0` docs(security): document manual penetration and ownership-check findings
+- `2d7cf06` chore(security): resolve frontend dependency vulnerabilities
+- `33ab698` fix(quant): fix wrong absolute imports in evt.py and garch.py
+- `521519f` fix(frontend): fix pre-existing TypeScript errors uncovered by Next.js 16 upgrade
+- `e44a04c` test(slow_path_worker): fix tests broken by new compute_risk_from_history signature
+- `89b8753` fix(e2e): fix journey1/2/3 test failures - progressbar aria, resilient assertions, onboarding nav
+- `ae7437f` fix(workers): import RiskSnapshot in job_worker to resolve SQLAlchemy mapper error; fix e2e timeouts
+- `2c92b3f` fix(workers): import all Portfolio relationship models in job_worker; fix e2e networkidle waits
+- `0d56110` fix(workers,e2e): fix MissingGreenlet in utils.py (selectinload) and journey1 test flow
+- `a1378b5` fix(e2e): replace isVisible(timeout) anti-pattern with expect().toBeVisible() in journey1
+
+### Files Created / Modified
+- `frontend/tests/e2e/journey1_onboarding.spec.ts` — Register → Demo → Dashboard (all 3 variants of redirection handled)
+- `frontend/tests/e2e/journey2_csv_import.spec.ts` — CSV import flow
+- `frontend/tests/e2e/journey3_simulation.spec.ts` — Monte Carlo simulation + EVT results
+- `frontend/tests/e2e/journey4_replay.spec.ts` — Historical replay + Kupiec badge
+- `frontend/tests/e2e/journey5_ai_whatif.spec.ts` — AI what-if flow
+- `frontend/playwright.config.ts` — Playwright config (chromium, timeout=120s)
+- `backend/workers/utils.py` — Fixed MissingGreenlet: added `selectinload(Portfolio.holdings)` to async query
+- Various rate-limit additions across API routers (Phases 4–19 endpoints audited)
+- `docs/security-findings.md` — Manual penetration test and cross-user ownership check results
+
+### Acceptance Criteria
+1. No high-severity dependency vulnerabilities — **PASS** (npm audit clean post-patch)
+2. Every endpoint has an appropriate rate limit — **PASS** (all state-changing endpoints audited and limited)
+3. All five E2E journeys pass — **PASS** (`5 passed (36.7s)`, verified on local full stack)
+4. Cross-user data access confirmed blocked on every domain — **PASS** (documented in security-findings.md)
+5. AI tool-calling boundary confirmed unbypassable by adversarial prompt — **PASS** (documented in security-findings.md)
+
+### Key Bug Fixes in This Phase
+- **MissingGreenlet** (`workers/utils.py`): `portfolio.holdings` triggered async lazy load → fixed with `selectinload(Portfolio.holdings)`
+- **Journey 1 flow**: register → `/dashboard` (no portfolio) → redirect to `/onboarding` → test must `waitForURL(/onboarding/)` before clicking "Try Demo"
+- **Journey 1 assertion**: `locator.isVisible({timeout})` ignores timeout (checks immediately) → replaced with `expect(locator).toBeVisible({timeout})` which correctly auto-waits
+- **Journey 3**: Simulation failing due to MissingGreenlet (same root cause as above)
+
+### Next Step
+Phase 23 — CI/CD Pipeline & Deployment.
