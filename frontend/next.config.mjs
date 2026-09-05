@@ -1,11 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Required for the Docker multi-stage build: produces a self-contained
-  // server.js in .next/standalone that doesn't need the full node_modules.
-  output: "standalone",
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // NOTE: output: "standalone" is intentionally removed here.
+  // It is only needed for Docker deployments. Vercel is incompatible with
+  // standalone mode and requires the default .next output layout.
+  // To restore Docker support, re-add: output: "standalone"
   typescript: {
     ignoreBuildErrors: true,
   },
