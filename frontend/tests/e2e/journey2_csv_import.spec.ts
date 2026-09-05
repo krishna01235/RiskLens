@@ -89,7 +89,7 @@ test.describe("Journey 2 — CSV Import", () => {
     // ── Step 4: Column mapping / confirmation ─────────────────────────────────────────────────────
     // After upload, the preview/mapping step should appear
     const confirmBtn = page
-      .getByRole("button", { name: /confirm|import|next/i })
+      .getByRole("button", { name: /confirm & import/i })
       .first();
     await expect(confirmBtn).toBeVisible({ timeout: 15_000 });
     // Dismiss any dev-tools overlay, then scroll into view and click
