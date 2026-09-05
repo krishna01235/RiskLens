@@ -10,18 +10,24 @@
 | 11 | ✅ complete | `03e24ab` | GARCH Volatility Modeling. |
 | 12 | ✅ complete | `b863d47` | Monte Carlo Simulation Engine; 98 unit tests pass; 93% quant coverage. |
 | 13 | ✅ complete | `xxxxxxx` | Extreme Value Theory. |
+| 2 | ✅ complete | `703e143` | All files created; compose config valid; live-verified in this session. |
+| 3 | ✅ complete | `8583ba6` | Full schema live in Postgres; integration test passing; idempotent migration. |
+| 4 | ✅ complete | `b824845` | Full auth flow (register/login/refresh/logout); 6 unit tests pass; frontend pages built. |
+| 5 | ✅ complete | `053710e` | Indian market support; CSV normalization; demo/manual endpoints; frontend UI flow. |
+| 6 | ✅ complete | `7bf0a2c` | Finnhub WS ingestion worker; Redis Stream pub; symbol autocomplete endpoint. |
+| 7 | ✅ complete | `5200d2a` | Symbol reverse index; dynamic Finnhub subscriptions; integration tests. |
+| 8 | ✅ complete | `4d436ad` | Core Quant Engine with 100% unit test coverage. |
+| 9 | ✅ complete | `69adae2` | Fast-Path Real-Time Pipeline. |
+| 10 | ✅ complete | `1634896` | Slow-Path Risk Recompute. |
+| 11 | ✅ complete | `03e24ab` | GARCH Volatility Modeling. |
+| 12 | ✅ complete | `b863d47` | Monte Carlo Simulation Engine; 98 unit tests pass; 93% quant coverage. |
+| 13 | ✅ complete | `xxxxxxx` | Extreme Value Theory. |
 | 14 | ✅ complete | `c7f4d8b` | Risk Budget & Alerting. |
 | 15 | ✅ complete | `f1e3baa` | Correlation Cluster Detection. |
 | 16 | ✅ complete | `f1e3baa` | HMM Market Regime Detection. |
 | 17 | ✅ complete | `3e8e192` | Decision Engine. |
 | 18 | ✅ complete | `b4fba39` | AI Risk Analyst (LangGraph Explain + What-If). |
 | 19 | ✅ complete | `xxxxxxx` | Historical Replay & Kupiec Backtest. |
-| 20 | ✅ complete | `1c8da04` | Frontend Design System Consolidation & Full Polish. |
-
----
-
-## Phase 8 — Core Quant Engine (COMPLETE)
-
 **Completed:** 2026-09-01
 
 ### Commits
@@ -627,4 +633,63 @@ HMM Market Regime Detection.
 6. RTL unit tests written for primitive components in vitest — **PASS**
 
 ### Next Step
-All implementation phases from `docs/implementation.md` are now fully complete. Project is wrapped.
+Phase 21 — Slack Bot Second Client.
+
+---
+
+## Phase 21 — Slack Bot Second Client (COMPLETE)
+
+**Completed:** 2026-09-05
+
+### Commits
+- `119c283` feat(auth): add named constants for API token byte-length, scopes, OTC TTL
+- `c525685` feat(auth): implement scoped API token issuance and one-time code flow
+- `61a92aa` feat(slack): add slack_links migration and ORM model
+- `d9ea79a` feat(slack): implement slack link/unlink endpoints and register router
+- `d2ffcc2` refactor(deps,routes): add get_current_user_any and apply to four Slack-bot-facing routes
+- `2027398` feat(slack): implement Slack Bolt app with login, status, whatif, alerts commands
+- `2589231` chore(deploy): add slack-bolt/httpx deps, slack_bot docker service, env vars
+- `a3052ea` test(auth,slack): add scope-enforcement, link flow, and formatter unit tests
+
+### Files Created
+**Backend:**
+- `backend/app/auth/constants.py` — `API_TOKEN_BYTE_LENGTH`, `ALLOWED_SCOPES`, `ONE_TIME_CODE_TTL_SECONDS` (single source of truth)
+- `backend/app/slack/__init__.py`
+- `backend/app/slack/router.py` — `POST /slack/link` (unauthenticated, rate-limited), `POST /slack/unlink` (JWT-gated)
+- `backend/slack_bot/__init__.py`
+- `backend/slack_bot/constants.py` — re-exports auth constants; bot never duplicates scope definitions
+- `backend/slack_bot/api_client.py` — thin `httpx.AsyncClient` wrapper for all four API endpoints
+- `backend/slack_bot/formatters.py` — Block Kit formatters (pure functions, no I/O)
+- `backend/slack_bot/app.py` — Slack Bolt socket-mode app (`/risklens login|status|whatif|alerts`)
+- `backend/alembic/versions/0d247978a39d_add_slack_links.py` — `slack_links` table migration
+- `backend/tests/integration/test_api_tokens.py` — 9 integration tests
+- `backend/tests/integration/test_slack_bot.py` — 7 integration tests
+- `backend/tests/unit/test_formatters.py` — 22 unit tests, all passing
+
+### Files Modified
+- `backend/app/auth/schemas.py` — added `ApiTokenCreateRequest`, `ApiTokenResponse`, `OneTimeCodeResponse`, `SlackLinkRequest`
+- `backend/app/auth/service.py` — added `create_api_token`, `validate_api_token`, `revoke_api_token`, `create_one_time_code`, `exchange_one_time_code`, `unlink_slack_user`, `get_linked_api_token_raw`
+- `backend/app/auth/router.py` — added `POST /auth/api-tokens` (5/min RL), `DELETE /auth/api-tokens/{id}`, `POST /auth/api-tokens/one-time-code` (10/min RL)
+- `backend/app/auth/models.py` — added `SlackLink` ORM model
+- `backend/app/deps.py` — added `get_current_user_any(required_scope)` dependency factory
+- `backend/app/portfolios/router.py` — `list_portfolios` → `get_current_user_any("read")`
+- `backend/app/risk/router.py` — `get_portfolio_risk` → `get_current_user_any("read")`
+- `backend/app/alerts/router.py` — `list_alerts` → `get_current_user_any("read")`
+- `backend/app/ai/router.py` — `what_if` → `get_current_user_any("whatif")`
+- `backend/app/main.py` — registered `slack_router`
+- `backend/pyproject.toml` — added `slack-bolt>=1.18`, `httpx>=0.27`
+- `docker-compose.yml` — added `slack_bot` service (socket-mode, depends on api/postgres/redis)
+- `.env.example` — added `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` with documentation
+
+### Acceptance Criteria
+1. `POST /auth/api-tokens` issues scoped tokens, hashed at rest — **PASS**
+2. Scope enforcement: read token → 403 on whatif endpoint; whatif token → 403 on read endpoints — **PASS** (tested)
+3. Revoked token → 401 — **PASS** (tested)
+4. One-time code is single-use (atomic Redis pipeline) — **PASS** (tested)
+5. All four Slack commands implemented with correct Block Kit output — **PASS** (formatters 22/22 unit tests)
+6. Exactly four routes changed; all others keep `get_current_user` — **PASS**
+7. Named constants are single source of truth — **PASS**
+8. Rate limiting on new endpoints — **PASS** (5/min api-tokens, 10/min OTC, 10/min /slack/link)
+
+### Next Step
+Phase 22 (if any) or project wrap-up.
