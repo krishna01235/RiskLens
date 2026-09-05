@@ -78,3 +78,30 @@ class ApiToken(Base):
     )  # noqa: E501
 
     user: Mapped["User"] = relationship(back_populates="api_tokens")
+
+
+class SlackLink(Base):
+    """Maps a Slack user ID to a scoped RiskLens API token.
+
+    One row per Slack user. Re-linking overwrites the existing row and
+    revokes the old token.
+    """
+
+    __tablename__ = "slack_links"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    slack_user_id: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    api_token_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("api_tokens.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+    api_token: Mapped["ApiToken"] = relationship()
