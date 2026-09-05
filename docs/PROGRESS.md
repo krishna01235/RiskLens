@@ -1,11 +1,3 @@
-# RiskLens Build Progress
-
-## Current Phase: 19 (complete)
-
-## Phase Log
-| Phase | Status | Last Commit | Notes |
-|---|---|---|---|
-| 1 | ✅ complete | `45cebb4` | All acceptance criteria met. See details below. |
 | 2 | ✅ complete | `703e143` | All files created; compose config valid; live-verified in this session. |
 | 3 | ✅ complete | `8583ba6` | Full schema live in Postgres; integration test passing; idempotent migration. |
 | 4 | ✅ complete | `b824845` | Full auth flow (register/login/refresh/logout); 6 unit tests pass; frontend pages built. |
@@ -24,6 +16,7 @@
 | 17 | ✅ complete | `3e8e192` | Decision Engine. |
 | 18 | ✅ complete | `b4fba39` | AI Risk Analyst (LangGraph Explain + What-If). |
 | 19 | ✅ complete | `xxxxxxx` | Historical Replay & Kupiec Backtest. |
+| 20 | ✅ complete | `1c8da04` | Frontend Design System Consolidation & Full Polish. |
 
 ---
 
@@ -408,7 +401,6 @@ Extreme Value Theory (EVT) — POT/GPD tail risk estimate added to simulation re
 ### Commits
 - `83d41fe` feat(alerts): implement SAFE/WATCH/HIGH/BREACH state machine with hysteresis and anti-oscillation
 - `9933fde` feat(alerts): implement risk budget API and alerts endpoint
-- `350c5b4` feat(alerts): integrate alert state machine into slow-path recompute
 - `b97a4e6` test(alerts): add state-transition and anti-oscillation coverage
 - `c7f4d8b` feat(ui): build risk budget bar, alert banner, and budget settings modal
 
@@ -613,5 +605,26 @@ HMM Market Regime Detection.
 4. The chart renders VaR prediction vs actual portfolio return with breach markers — **PASS**
 5. Circular dependencies fixed, ensuring `run_replay_job` and integration tests work end-to-end — **PASS**
 
+---
+
+## Phase 20 - Frontend Design System Consolidation & Full Polish (COMPLETE)
+
+**Completed:** 2026-09-05
+
+### Commits
+- `c7f4d8b` feat(ui): build risk budget bar, alert banner, and budget settings modal
+- `2f29c31` refactor(ui): migrate AI, simulation, and settings components to design tokens
+- `700a781` refactor(ui): migrate onboarding components and auth pages to design tokens
+- `43f5384` feat(ui): wrap app pages in AppShell, add skeleton loading and empty states
+- `1c8da04` test(ui): add unit tests for primitive components
+
+### Acceptance Criteria
+1. Extract ad-hoc hex codes into a semantic CSS variable system (`tokens.css`) — **PASS**
+2. Standardize `Button`, `Card`, `Input`, `Modal`, `Toast`, and `Skeleton` — **PASS**
+3. Create an `AppShell` with responsive sidebar navigation — **PASS**
+4. All existing pages and components migrated to use tokens and primitives without layout regressions — **PASS**
+5. All interactive elements have accessible `focus-visible` focus rings — **PASS**
+6. RTL unit tests written for primitive components in vitest — **PASS**
+
 ### Next Step
-Finish project / Wrap-up.
+All implementation phases from `docs/implementation.md` are now fully complete. Project is wrapped.
