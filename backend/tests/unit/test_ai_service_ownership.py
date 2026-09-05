@@ -60,6 +60,8 @@ class TestListConversations:
         conv = _make_conversation(portfolio_id, user_id)
 
         db = AsyncMock()
+    db.add = MagicMock()
+    db.delete = MagicMock()
         # Simulate the service correctly filtering by ownership
         with patch.object(service, "list_conversations", new=AsyncMock(return_value=[conv])):
             result = await service.list_conversations(db, portfolio_id, user_id)
@@ -79,6 +81,8 @@ class TestListConversations:
         victim_portfolio_id = uuid.uuid4()
 
         db = AsyncMock()
+    db.add = MagicMock()
+    db.delete = MagicMock()
         # The real service raises HTTP 403 when portfolio lookup returns no row
         with patch.object(
             service,
@@ -110,6 +114,8 @@ class TestListMessages:
         msg = _make_message(conversation_id)
 
         db = AsyncMock()
+    db.add = MagicMock()
+    db.delete = MagicMock()
         with patch.object(service, "list_messages", new=AsyncMock(return_value=[msg])):
             result = await service.list_messages(db, conversation_id, user_id)
 
@@ -125,6 +131,8 @@ class TestListMessages:
         victim_conversation_id = uuid.uuid4()
 
         db = AsyncMock()
+    db.add = MagicMock()
+    db.delete = MagicMock()
         with patch.object(
             service,
             "list_messages",

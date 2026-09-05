@@ -13,6 +13,8 @@ import app.ai.models
 @pytest.mark.asyncio
 async def test_update_symbol_index_add_0_to_1():
     mock_db = AsyncMock()
+    db.add = MagicMock()
+    db.delete = MagicMock()
     mock_redis = AsyncMock()
     
     mock_redis.pipeline = MagicMock()
@@ -42,6 +44,8 @@ async def test_update_symbol_index_add_0_to_1():
 @pytest.mark.asyncio
 async def test_update_symbol_index_add_1_to_2():
     mock_db = AsyncMock()
+    db.add = MagicMock()
+    db.delete = MagicMock()
     mock_redis = AsyncMock()
     
     mock_redis.pipeline = MagicMock()
@@ -67,6 +71,8 @@ async def test_update_symbol_index_add_1_to_2():
 @pytest.mark.asyncio
 async def test_update_symbol_index_remove_1_to_0():
     mock_db = AsyncMock()
+    db.add = MagicMock()
+    db.delete = MagicMock()
     mock_redis = AsyncMock()
     
     mock_redis.pipeline = MagicMock()
