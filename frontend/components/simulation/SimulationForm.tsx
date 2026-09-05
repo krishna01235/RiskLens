@@ -1,6 +1,19 @@
-﻿"use client";
+/**
+ * SimulationForm.tsx — Monte Carlo parameter form, migrated to tokens.
+ *
+ * Changes:
+ * - bg-[#161b22] / bg-[#0d1117] → brand tokens
+ * - Gradient run button → <Button primary>
+ * - Portfolio ID field → <Input>
+ * - Selected horizon/path chips styled with brand-accent
+ */
+
+"use client";
 
 import { useState } from "react";
+import Card from "@/components/ui/Card";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
 
 interface Props {
   onRun: (portfolioId: string, horizonDays: number, numPaths: number) => void;
@@ -8,16 +21,16 @@ interface Props {
 }
 
 const HORIZONS = [
-  { label: "1 Day", value: 1 },
+  { label: "1 Day",  value: 1 },
   { label: "7 Days", value: 7 },
-  { label: "30 Days", value: 30 },
-  { label: "90 Days", value: 90 },
+  { label: "30 Days",value: 30 },
+  { label: "90 Days",value: 90 },
 ];
 
 const PATH_COUNTS = [
-  { label: "10K paths", value: 10_000 },
-  { label: "50K paths", value: 50_000 },
-  { label: "100K paths", value: 100_000 },
+  { label: "10K",  value: 10_000 },
+  { label: "50K",  value: 50_000 },
+  { label: "100K", value: 100_000 },
 ];
 
 export default function SimulationForm({ onRun, disabled }: Props) {
@@ -37,73 +50,81 @@ export default function SimulationForm({ onRun, disabled }: Props) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-[#161b22] border border-gray-800 rounded-2xl p-6 space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Portfolio ID</label>
-        <input
+    <form onSubmit={handleSubmit}>
+      <Card className="space-y-5">
+        <Input
           id="portfolio-id-input"
+          label="Portfolio ID"
           type="text"
           value={portfolioId}
           onChange={(e) => setPortfolioId(e.target.value)}
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="w-full bg-[#0d1117] border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={disabled}
+          error={error || undefined}
         />
-        {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Simulation Horizon</label>
-        <div className="flex gap-2 flex-wrap">
-          {HORIZONS.map((h) => (
-            <button
-              key={h.value}
-              type="button"
-              id={`horizon-${h.value}`}
-              onClick={() => setHorizon(h.value)}
-              disabled={disabled}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                horizon === h.value
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                  : "bg-[#0d1117] border border-gray-700 text-gray-400 hover:border-blue-500"
-              }`}
-            >
-              {h.label}
-            </button>
-          ))}
+        {/* Horizon selector */}
+        <div>
+          <p className="text-sm font-medium text-brand-secondary mb-2">
+            Simulation Horizon
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {HORIZONS.map((h) => (
+              <button
+                key={h.value}
+                type="button"
+                id={`horizon-${h.value}`}
+                onClick={() => setHorizon(h.value)}
+                disabled={disabled}
+                aria-pressed={horizon === h.value}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
+                  horizon === h.value
+                    ? "bg-brand-accent text-white"
+                    : "bg-brand-bg border border-brand-border text-brand-secondary hover:border-brand-accent hover:text-brand-primary"
+                }`}
+              >
+                {h.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Path Count</label>
-        <div className="flex gap-2 flex-wrap">
-          {PATH_COUNTS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              id={`paths-${p.value}`}
-              onClick={() => setNumPaths(p.value)}
-              disabled={disabled}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                numPaths === p.value
-                  ? "bg-cyan-600 text-white shadow-lg shadow-cyan-500/20"
-                  : "bg-[#0d1117] border border-gray-700 text-gray-400 hover:border-cyan-500"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        {/* Path count selector */}
+        <div>
+          <p className="text-sm font-medium text-brand-secondary mb-2">
+            Path Count
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {PATH_COUNTS.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                id={`paths-${p.value}`}
+                onClick={() => setNumPaths(p.value)}
+                disabled={disabled}
+                aria-pressed={numPaths === p.value}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] ${
+                  numPaths === p.value
+                    ? "bg-brand-accent text-white"
+                    : "bg-brand-bg border border-brand-border text-brand-secondary hover:border-brand-accent hover:text-brand-primary"
+                }`}
+              >
+                {p.label} paths
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <button
-        id="run-simulation-btn"
-        type="submit"
-        disabled={disabled}
-        className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl font-semibold text-white hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
-      >
-        Run Simulation
-      </button>
+        <Button
+          id="run-simulation-btn"
+          type="submit"
+          variant="primary"
+          loading={disabled}
+          className="w-full"
+        >
+          Run Simulation
+        </Button>
+      </Card>
     </form>
   );
 }
