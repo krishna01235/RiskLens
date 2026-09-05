@@ -9,10 +9,11 @@ import { HTMLAttributes } from "react";
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   /** Use `elevated` for nested cards or panels that sit on top of a card. */
   elevated?: boolean;
-  padding?: "sm" | "md" | "lg";
+  padding?: "none" | "sm" | "md" | "lg";
 }
 
 const PADDING = {
+  none: "p-0",
   sm: "p-3",
   md: "p-4",
   lg: "p-6",
