@@ -1,0 +1,151 @@
+services:
+  - type: web
+    name: risklens-api
+    env: python
+    buildCommand: pip install -e "./backend"
+    preDeployCommand: cd backend && alembic upgrade head
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: risklens-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: risklens-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: FINNHUB_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+  - type: worker
+    name: risklens-ingestion-worker
+    env: python
+    buildCommand: pip install -e "./backend"
+    startCommand: cd backend && python -m workers.ingestion_worker
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: risklens-redis
+          property: connectionString
+      - key: FINNHUB_API_KEY
+        sync: false
+
+  - type: worker
+    name: risklens-fast-path-worker
+    env: python
+    buildCommand: pip install -e "./backend"
+    startCommand: cd backend && python -m workers.fast_path_worker
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: risklens-redis
+          property: connectionString
+
+  - type: worker
+    name: risklens-slow-path-worker
+    env: python
+    buildCommand: pip install -e "./backend"
+    startCommand: cd backend && python -m workers.slow_path_worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: risklens-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: risklens-redis
+          property: connectionString
+
+  - type: worker
+    name: risklens-garch-worker
+    env: python
+    buildCommand: pip install -e "./backend"
+    startCommand: cd backend && python -m workers.garch_worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: risklens-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: risklens-redis
+          property: connectionString
+
+  - type: worker
+    name: risklens-regime-worker
+    env: python
+    buildCommand: pip install -e "./backend"
+    startCommand: cd backend && python -m workers.regime_worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: risklens-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: risklens-redis
+          property: connectionString
+
+  - type: worker
+    name: risklens-decision-engine-worker
+    env: python
+    buildCommand: pip install -e "./backend"
+    startCommand: cd backend && python -m workers.decision_engine_worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: risklens-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: risklens-redis
+          property: connectionString
+
+  - type: worker
+    name: risklens-job-worker
+    env: python
+    buildCommand: pip install -e "./backend"
+    startCommand: cd backend && arq workers.job_worker.WorkerSettings
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: risklens-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: risklens-redis
+          property: connectionString
+
+  - type: worker
+    name: risklens-slack-bot
+    env: python
+    buildCommand: pip install -e "./backend"
+    startCommand: cd backend && python -m slack_bot.app
+    envVars:
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_APP_TOKEN
+        sync: false
+      - key: RISK_LENS_API_URL
+        value: "https://risklens-api.onrender.com"
+
+  - type: redis
+    name: risklens-redis
+    plan: free
+
+databases:
+  - name: risklens-db
+    databaseName: risklens
+    user: risklens

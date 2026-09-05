@@ -1,0 +1,62 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend to Render
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy Hook (API)
+        run: |
+          if [ -n "${{ secrets.RENDER_API_DEPLOY_HOOK }}" ]; then
+            curl -X POST -d "" "${{ secrets.RENDER_API_DEPLOY_HOOK }}"
+          else
+            echo "RENDER_API_DEPLOY_HOOK secret is not set, skipping API deploy."
+          fi
+
+      - name: Trigger Render Deploy Hook (Workers)
+        run: |
+          if [ -n "${{ secrets.RENDER_WORKER_DEPLOY_HOOK }}" ]; then
+            curl -X POST -d "" "${{ secrets.RENDER_WORKER_DEPLOY_HOOK }}"
+          else
+            echo "RENDER_WORKER_DEPLOY_HOOK secret is not set, skipping Worker deploys."
+          fi
+
+  deploy-frontend:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        run: |
+          if [ -n "${{ secrets.VERCEL_DEPLOY_HOOK }}" ]; then
+            curl -X POST -d "" "${{ secrets.VERCEL_DEPLOY_HOOK }}"
+          else
+            echo "VERCEL_DEPLOY_HOOK secret is not set. Assuming native GitHub integration."
+          fi
+
+  smoke-test:
+    name: Smoke Test Production Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    steps:
+      - name: Wait for Deployment to Stabilize
+        run: sleep 60
+
+      - name: Health Check
+        run: |
+          # The domain should be defined in secrets (e.g. https://api.risklens.com)
+          if [ -n "${{ secrets.PROD_API_URL }}" ]; then
+            HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" "${{ secrets.PROD_API_URL }}/health")
+            if [ "$HTTP_STATUS" -ne 200 ]; then
+              echo "Smoke test failed! Expected 200 OK from /health, got $HTTP_STATUS"
+              exit 1
+            else
+              echo "Smoke test passed."
+            fi
+          else
+            echo "PROD_API_URL secret is not set, skipping smoke test."
+          fi
