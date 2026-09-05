@@ -742,3 +742,29 @@ Phase 22 — Testing Hardening & Security Pass.
 
 ### Next Step
 Phase 23 — CI/CD Pipeline & Deployment.
+
+---
+
+## Phase 23 — CI/CD Pipeline & Deployment (COMPLETE)
+
+**Completed:** 2026-09-05
+
+### Commits
+- `034065f` ci(github-actions): add build and deploy workflow and Render service definitions
+- `806e740` docs(setup): document production deployment configuration
+
+### Files Created / Modified
+**Root:**
+- `.github/workflows/ci.yml` — Runs linting, testing, and E2E checks on all PRs/pushes to main.
+- `.github/workflows/deploy.yml` — Triggers Vercel and Render deploy hooks on pushes to main.
+- `render.yaml` — Infrastructure-as-code configuration specifying API, Workers, Redis, and Postgres.
+- `docs/setup.md` — Detailed step-by-step production deployment instructions for Vercel and Render.
+- `.env.example` — Added production and deployment Webhook examples.
+
+### Acceptance Criteria
+1. A GitHub Actions CI workflow triggers on every PR and must pass (linting, tests, E2E) — **PASS**
+2. A deployment workflow triggers on merge to `main`, automating deployment — **PASS**
+3. The `render.yaml` correctly defines all the necessary services: API, Postgres, Redis, and all background workers — **PASS**
+
+### Next Step
+Phase 24 — Final QA, Bug Elimination & Production Readiness.
