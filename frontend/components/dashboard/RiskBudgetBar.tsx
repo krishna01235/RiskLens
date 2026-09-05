@@ -1,4 +1,15 @@
-﻿"use client";
+/**
+ * RiskBudgetBar.tsx — Risk budget utilisation bar, migrated to design tokens.
+ *
+ * Changes:
+ * - All hardcoded hex (#161b22, gray-800, etc.) replaced with brand tokens
+ * - Bar fill animates with duration-normal ease-out-expo (300 ms)
+ * - Configure/Edit use <Button> primitive
+ */
+
+"use client";
+
+import Button from "@/components/ui/Button";
 
 interface RiskBudget {
   max_cvar: number;
@@ -13,14 +24,30 @@ interface Props {
   onConfigureClick: () => void;
 }
 
-const STATE_CONFIG = {
-  SAFE:   { label: "SAFE",   color: "bg-emerald-500", text: "text-emerald-400", border: "border-emerald-500/30" },
-  WATCH:  { label: "WATCH",  color: "bg-yellow-500",  text: "text-yellow-400",  border: "border-yellow-500/30" },
-  HIGH:   { label: "HIGH",   color: "bg-orange-500",  text: "text-orange-400",  border: "border-orange-500/30" },
-  BREACH: { label: "BREACH", color: "bg-red-500",     text: "text-red-400",     border: "border-red-500/30"   },
-} as const;
+type RiskState = "SAFE" | "WATCH" | "HIGH" | "BREACH";
 
-function getState(util: number, b: RiskBudget): keyof typeof STATE_CONFIG {
+const STATE_BAR: Record<RiskState, string> = {
+  SAFE:   "bg-brand-safe",
+  WATCH:  "bg-brand-watch",
+  HIGH:   "bg-brand-high",
+  BREACH: "bg-brand-breach",
+};
+
+const STATE_TEXT: Record<RiskState, string> = {
+  SAFE:   "text-brand-safe",
+  WATCH:  "text-brand-watch",
+  HIGH:   "text-brand-high",
+  BREACH: "text-brand-breach",
+};
+
+const STATE_BORDER: Record<RiskState, string> = {
+  SAFE:   "border-brand-safe/30",
+  WATCH:  "border-brand-watch/30",
+  HIGH:   "border-brand-high/30",
+  BREACH: "border-brand-breach/30",
+};
+
+function getState(util: number, b: RiskBudget): RiskState {
   if (util >= b.breach_threshold) return "BREACH";
   if (util >= b.high_threshold)   return "HIGH";
   if (util >= b.watch_threshold)  return "WATCH";
@@ -30,18 +57,19 @@ function getState(util: number, b: RiskBudget): keyof typeof STATE_CONFIG {
 export default function RiskBudgetBar({ budget, currentCvar, onConfigureClick }: Props) {
   if (!budget) {
     return (
-      <div className="bg-[#161b22] border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+      <div className="rounded-lg border border-brand-border bg-brand-elevated p-4 flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-400 font-medium">Risk Budget</p>
-          <p className="text-xs text-gray-600 mt-0.5">No budget configured</p>
+          <p className="text-sm font-medium text-brand-secondary">Risk Budget</p>
+          <p className="text-xs text-brand-tertiary mt-0.5">No budget configured</p>
         </div>
-        <button
+        <Button
           id="configure-budget-btn"
+          variant="secondary"
+          size="sm"
           onClick={onConfigureClick}
-          className="text-xs text-blue-400 border border-blue-500/40 rounded-lg px-3 py-1.5 hover:bg-blue-500/10 transition-colors"
         >
           Configure
-        </button>
+        </Button>
       </div>
     );
   }
@@ -50,58 +78,69 @@ export default function RiskBudgetBar({ budget, currentCvar, onConfigureClick }:
     ? currentCvar / budget.max_cvar
     : 0;
   const state = getState(util, budget);
-  const cfg = STATE_CONFIG[state];
   const pct = Math.min(util * 100, 100);
 
   return (
-    <div className={`bg-[#161b22] border ${cfg.border} rounded-xl p-4`}>
+    <div className={`rounded-lg border ${STATE_BORDER[state]} bg-brand-elevated p-4`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <p className="text-sm text-gray-300 font-medium">Risk Budget</p>
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-opacity-20 ${cfg.text}`}>
-            {cfg.label}
+          <p className="text-sm font-medium text-brand-secondary">Risk Budget</p>
+          <span
+            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATE_TEXT[state]}`}
+            aria-label={`Risk state: ${state}`}
+          >
+            {state}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-mono text-gray-400">
-            {(util * 100).toFixed(1)}% of budget
+          <span className="text-sm font-mono text-brand-tertiary tabular-nums">
+            {(util * 100).toFixed(1)}% used
           </span>
-          <button
+          <Button
             id="edit-budget-btn"
+            variant="ghost"
+            size="sm"
             onClick={onConfigureClick}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            aria-label="Edit risk budget"
           >
             Edit
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="relative w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+      <div
+        className="relative w-full h-2.5 bg-brand-bg rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={Math.round(pct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Risk budget utilisation: ${pct.toFixed(1)}%`}
+      >
         {/* Threshold markers */}
         <div
-          className="absolute top-0 h-full w-px bg-yellow-500/60 z-10"
+          className="absolute top-0 h-full w-px bg-brand-watch/60 z-10"
+          aria-hidden="true"
           style={{ left: `${budget.watch_threshold * 100}%` }}
-          title={`Watch: ${(budget.watch_threshold * 100).toFixed(0)}%`}
         />
         <div
-          className="absolute top-0 h-full w-px bg-orange-500/60 z-10"
+          className="absolute top-0 h-full w-px bg-brand-high/60 z-10"
+          aria-hidden="true"
           style={{ left: `${budget.high_threshold * 100}%` }}
-          title={`High: ${(budget.high_threshold * 100).toFixed(0)}%`}
         />
-        {/* Utilization fill */}
+        {/* Utilisation fill — 300 ms ease-out-expo transition per spec */}
         <div
-          className={`h-full ${cfg.color} rounded-full transition-all duration-700`}
+          className={`h-full rounded-full transition-[width] duration-normal ease-out-expo ${STATE_BAR[state]}`}
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      {/* Labels */}
-      <div className="flex justify-between text-xs text-gray-600 mt-1.5">
+      {/* Scale labels */}
+      <div className="flex justify-between text-xs text-brand-tertiary mt-1.5 font-mono tabular-nums" aria-hidden="true">
         <span>0</span>
-        <span className="text-yellow-600">{(budget.watch_threshold * 100).toFixed(0)}%</span>
-        <span className="text-orange-600">{(budget.high_threshold * 100).toFixed(0)}%</span>
-        <span>Max CVaR: ${budget.max_cvar.toLocaleString()}</span>
+        <span className="text-brand-watch">{(budget.watch_threshold * 100).toFixed(0)}%</span>
+        <span className="text-brand-high">{(budget.high_threshold * 100).toFixed(0)}%</span>
+        <span>Max ${budget.max_cvar.toLocaleString()}</span>
       </div>
     </div>
   );

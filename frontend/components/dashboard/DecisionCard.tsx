@@ -1,58 +1,78 @@
+/**
+ * DecisionCard.tsx — Decision engine candidate card, migrated to tokens.
+ */
+
+"use client";
+
 import { DecisionCandidate } from "@/hooks/useRiskSocket";
-import { CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
+import Card from "@/components/ui/Card";
 
 export function DecisionCard({ candidate }: { candidate: DecisionCandidate }) {
   const isBest = candidate.score === 100;
-  
+
   return (
-    <div className={`p-4 rounded-lg border flex flex-col gap-2 transition-all ${
-      isBest 
-        ? "bg-green-500/10 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.1)]" 
-        : "bg-gray-800/50 border-gray-700 hover:border-gray-600"
-    }`}>
-      <div className="flex justify-between items-start">
-        <h4 className="font-semibold text-gray-100">{candidate.label}</h4>
+    <Card
+      className={`flex flex-col gap-2 transition-colors ${
+        isBest
+          ? "border-brand-safe/40 bg-brand-safe-m"
+          : "hover:border-brand-border"
+      }`}
+      padding="md"
+    >
+      <div className="flex justify-between items-start gap-2">
+        <h4 className="text-sm font-semibold text-brand-primary leading-snug">
+          {candidate.label}
+        </h4>
         {isBest && (
-          <span className="flex items-center gap-1 text-xs font-bold text-green-400 bg-green-500/20 px-2 py-1 rounded-full uppercase tracking-wider">
-            <CheckCircle2 className="w-3 h-3" />
-            Recommended
+          <span className="flex items-center gap-1 text-xs font-semibold text-brand-safe px-1.5 py-0.5 rounded bg-brand-safe/15 shrink-0">
+            {/* Check icon */}
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M2 5.5L4 7.5L8 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Best
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mt-2">
+      <div className="grid grid-cols-2 gap-3 mt-1">
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Expected Return</p>
-          <p className={`text-lg font-mono ${candidate.expected_return >= 0 ? "text-green-400" : "text-red-400"}`}>
-            {candidate.expected_return > 0 ? "+" : ""}{(candidate.expected_return * 100).toFixed(2)}%
+          <p className="text-xs text-brand-tertiary uppercase tracking-wide">E[Return]</p>
+          <p className={`text-base font-mono tabular-nums font-medium ${
+            candidate.expected_return >= 0 ? "text-brand-safe" : "text-brand-breach"
+          }`}>
+            {candidate.expected_return > 0 ? "+" : ""}
+            {(candidate.expected_return * 100).toFixed(2)}%
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider">CVaR (95%)</p>
-          <p className="text-lg font-mono text-gray-200">
+          <p className="text-xs text-brand-tertiary uppercase tracking-wide">CVaR 95%</p>
+          <p className="text-base font-mono tabular-nums font-medium text-brand-primary">
             {(candidate.cvar * 100).toFixed(2)}%
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Prob. Loss</p>
-          <p className="text-lg font-mono text-gray-200">
+          <p className="text-xs text-brand-tertiary uppercase tracking-wide">P(Loss)</p>
+          <p className="text-base font-mono tabular-nums font-medium text-brand-primary">
             {(candidate.p_loss * 100).toFixed(1)}%
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Score</p>
-          <p className="text-lg font-mono text-gray-200">
-            {candidate.score.toFixed(0)} / 100
+          <p className="text-xs text-brand-tertiary uppercase tracking-wide">Score</p>
+          <p className="text-base font-mono tabular-nums font-medium text-brand-primary">
+            {candidate.score.toFixed(0)}/100
           </p>
         </div>
       </div>
 
       {candidate.is_fallback && (
-        <div className="mt-2 flex items-start gap-2 text-xs text-amber-500/80 bg-amber-500/10 p-2 rounded-md">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <p>Evaluation timed out. Score is based on deterministic mean-variance approximation rather than full Monte Carlo.</p>
+        <div className="mt-1 flex items-start gap-2 text-xs text-brand-watch bg-brand-watch-m p-2 rounded">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0 mt-0.5" aria-hidden="true">
+            <path d="M6 1.5L10.5 10H1.5L6 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+            <path d="M6 5v2.5M6 8.5h.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+          <p>Timed out — score uses deterministic approximation, not full Monte Carlo.</p>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

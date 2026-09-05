@@ -1,26 +1,57 @@
-import { AlertTriangle } from "lucide-react";
+/**
+ * ConcentrationWarning.tsx — Left-accent-bar warning, migrated to tokens.
+ *
+ * Uses --color-watch for the WATCH-level semantic colour.
+ * Text label always accompanies the colour signal (accessibility).
+ */
 
 export function ConcentrationWarning({
   correlationFlags,
 }: {
   correlationFlags?: string[][];
 }) {
-  if (!correlationFlags || correlationFlags.length === 0) {
-    return null;
-  }
+  if (!correlationFlags || correlationFlags.length === 0) return null;
 
   return (
-    <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 rounded-lg p-4 mb-6 animate-in fade-in slide-in-from-top-2">
-      <div className="flex gap-3">
-        <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+    <div
+      role="alert"
+      className="flex items-start gap-0 overflow-hidden rounded-lg border border-brand-watch/30 bg-brand-elevated mb-2"
+    >
+      {/* Left accent bar */}
+      <div aria-hidden="true" className="w-1 self-stretch shrink-0 bg-brand-watch" />
+
+      <div className="flex items-start gap-3 px-4 py-3">
+        {/* Warning icon */}
+        <svg
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="shrink-0 mt-0.5 text-brand-watch"
+        >
+          <path
+            d="M8 2L14.5 13H1.5L8 2Z"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
+          <path d="M8 6.5v3M8 11h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+
         <div className="space-y-1">
-          <h4 className="font-medium text-yellow-500/90">Concentration Risk Detected</h4>
-          <p className="text-sm text-yellow-500/80">
-            High correlation (&gt;0.7) found between the following assets. Your portfolio may be less diversified than it appears.
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-watch">
+            Concentration Risk
+          </h4>
+          <p className="text-sm text-brand-primary">
+            High correlation (&gt;0.7) detected between these assets — your
+            portfolio may be less diversified than it appears.
           </p>
-          <ul className="list-disc list-inside text-sm text-yellow-500/80 pt-1">
+          <ul className="list-disc list-inside text-sm text-brand-secondary pt-0.5 space-y-0.5">
             {correlationFlags.map((cluster, i) => (
-              <li key={i}>{cluster.join(", ")}</li>
+              <li key={i} className="font-mono text-xs">
+                {cluster.join(", ")}
+              </li>
             ))}
           </ul>
         </div>

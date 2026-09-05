@@ -1,7 +1,12 @@
+/**
+ * RegimeBadge.tsx — Market regime indicator, migrated to design tokens.
+ *
+ * Text label always accompanies colour for accessibility.
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, ShieldCheck, ShieldAlert } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
 interface MarketRegime {
@@ -18,44 +23,46 @@ export function RegimeBadge() {
       try {
         const data = await apiClient.get<MarketRegime>("/market/regime");
         setRegime(data);
-      } catch (err) {
-        console.error("Failed to fetch market regime:", err);
+      } catch {
+        // Silently ignore — badge just won't show
       }
     }
 
     fetchRegime();
-    // Poll every 3 minutes
-    const interval = setInterval(fetchRegime, 180000);
+    const interval = setInterval(fetchRegime, 180_000); // every 3 min
     return () => clearInterval(interval);
   }, []);
 
-  if (!regime) {
-    return null;
-  }
+  if (!regime) return null;
 
   const isStressed = regime.stressed_probability > 0.5;
-  const probability = isStressed 
-    ? regime.stressed_probability 
+  const probability = isStressed
+    ? regime.stressed_probability
     : regime.calm_probability;
 
   return (
     <div
-      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
         isStressed
-          ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
-          : "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+          ? "border-brand-watch/30 bg-brand-watch-m text-brand-watch"
+          : "border-brand-safe/30 bg-brand-safe-m text-brand-safe"
       }`}
-      title={`Updated at ${new Date(regime.updated_at * 1000).toLocaleTimeString()}`}
+      title={`Updated ${new Date(regime.updated_at * 1000).toLocaleTimeString()}`}
+      aria-label={`Market regime: ${isStressed ? "Stressed" : "Calm"} at ${(probability * 100).toFixed(1)}% confidence`}
     >
+      {/* Icon */}
       {isStressed ? (
-        <ShieldAlert className="h-4 w-4" />
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M6 1.5L10.5 10H1.5L6 1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+          <path d="M6 5v2M6 8.5h.01" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
       ) : (
-        <ShieldCheck className="h-4 w-4" />
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2 6h1.5M6 2v1.5M10 6H8.5M6 10V8.5M3.5 3.5l1 1M8.5 3.5l-1 1M6 4.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
       )}
-      <span>Market Regime: {isStressed ? "Stressed" : "Calm"}</span>
-      <span className={`rounded-full px-1.5 py-0.5 text-xs ${
-        isStressed ? "bg-amber-500/20" : "bg-emerald-500/20"
-      }`}>
+      <span>{isStressed ? "Stressed" : "Calm"}</span>
+      <span className="font-mono tabular-nums opacity-80">
         {(probability * 100).toFixed(1)}%
       </span>
     </div>
