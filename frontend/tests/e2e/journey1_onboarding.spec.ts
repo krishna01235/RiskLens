@@ -40,9 +40,7 @@ test.describe("Journey 1 — Register → Onboarding → Dashboard", () => {
     await page.waitForURL(/onboarding/, { timeout: 20_000 });
 
     // ── Step 4: Click "Try Demo" on onboarding page ───────────────────────────
-    const demoBtn = page.getByRole("button", {
-      name: /try demo/i,
-    });
+    const demoBtn = page.getByRole("button", { name: /try demo/i });
     await expect(demoBtn).toBeVisible({ timeout: 10_000 });
     await demoBtn.click();
 
@@ -51,29 +49,12 @@ test.describe("Journey 1 — Register → Onboarding → Dashboard", () => {
     await page.waitForURL(/dashboard/, { timeout: 20_000 });
 
     // ── Step 6: Dashboard must show the Risk Dashboard heading ────────────────
-    // The heading is always rendered regardless of whether the slow-path worker
-    // has computed risk metrics yet — it is a reliable presence signal.
-    const dashHeader = page
-      .getByRole("heading", { name: /risk dashboard/i })
-      .first();
-
-    const hasDashboardContent =
-      await dashHeader.isVisible({ timeout: 20_000 }).catch(() => false);
-
-    // Fallback: also accept any metric card or waiting-for-data text
-    if (!hasDashboardContent) {
-      const waitingText = page.getByText(/waiting for market data/i).first();
-      const metricCard = page
-        .locator('[data-testid="metric-card"], .metric-card, [class*="MetricCard"]')
-        .first();
-      const fallbackVisible =
-        (await waitingText.isVisible({ timeout: 10_000 }).catch(() => false)) ||
-        (await metricCard.isVisible({ timeout: 10_000 }).catch(() => false));
-
-      expect(
-        fallbackVisible,
-        "Dashboard should show 'Risk Dashboard' heading or metric content after demo portfolio creation"
-      ).toBe(true);
-    }
+    // Use expect().toBeVisible() which correctly auto-waits (locator.isVisible()
+    // ignores the timeout parameter and returns immediately).
+    // The heading is always rendered once the portfolio is loaded, regardless of
+    // whether the slow-path worker has finished computing risk metrics yet.
+    await expect(
+      page.getByRole("heading", { name: /risk dashboard/i }).first()
+    ).toBeVisible({ timeout: 20_000 });
   });
 });
