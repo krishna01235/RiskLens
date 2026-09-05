@@ -10,7 +10,7 @@
 
 import { test, expect } from "@playwright/test";
 
-const email = `e2e-journey4-${Date.now()}@risklens-test.local`;
+const email = `e2e-journey4-${Date.now()}@risklens-test.com`;
 const password = "E2eTestPass123!";
 
 test.describe("Journey 4 — Historical Replay & Kupiec Backtest", () => {
@@ -21,12 +21,15 @@ test.describe("Journey 4 — Historical Replay & Kupiec Backtest", () => {
     await page.getByLabel(/^password$/i).fill(password);
     const confirmField = page.getByLabel(/confirm password/i);
     if (await confirmField.isVisible()) await confirmField.fill(password);
-    await page.getByRole("button", { name: /register|sign up/i }).click();
+    await page.getByRole("button", { name: /register|sign up|create account/i }).click();
     await page.waitForURL(/dashboard|onboarding/, { timeout: 15_000 });
-    const demoBtn = page.getByRole("button", { name: /demo|get started/i });
-    if (await demoBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    const demoBtn = page.getByRole("button", { name: /demo|get started/i }).first();
+    try {
+      await demoBtn.waitFor({ state: "visible", timeout: 10_000 });
       await demoBtn.click();
       await page.waitForURL(/dashboard/, { timeout: 15_000 });
+    } catch (e) {
+      // ignore
     }
     await page.close();
   });

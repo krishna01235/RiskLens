@@ -38,7 +38,7 @@ export default function RegisterPage() {
       setAccessToken(data.access_token);
       const payload = JSON.parse(atob(data.access_token.split(".")[1]));
       setUser({ id: payload.sub, email, role: "user" });
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: unknown) {
       const httpErr = err as { status?: number; message?: string };
       if (httpErr.status === 409) {

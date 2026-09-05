@@ -34,11 +34,12 @@ portfolios_router = APIRouter(tags=["portfolios"])
 
 
 @portfolios_router.post("/demo", response_model=PortfolioOut, status_code=201)
-@limiter.limit("3/minute")
+@limiter.limit("30/minute")
 async def create_demo_portfolio(
     market: DemoMarket = Query(default=DemoMarket.us),
     request: Request = None,  # noqa: ARG001  # required by slowapi
     db: AsyncSession = Depends(get_db),  # noqa: B008
+    redis: Redis = Depends(get_redis),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> PortfolioOut:
     """Seed and return a demo portfolio (US or India).
@@ -47,7 +48,7 @@ async def create_demo_portfolio(
     existing demo portfolio without creating a duplicate.
     Rate limited to 3 requests per minute per IP.
     """
-    portfolio = await service.create_demo_portfolio(db, current_user.id, market)
+    portfolio = await service.create_demo_portfolio(db, redis, current_user.id, market)
     return PortfolioOut.model_validate(portfolio)
 
 

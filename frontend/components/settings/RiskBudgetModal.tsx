@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useAuthStore } from "@/store/auth-store";
 
 export interface RiskBudget {
   max_cvar: number;
@@ -75,7 +76,7 @@ export default function RiskBudgetModal({
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
           },
           body: JSON.stringify({
             max_cvar: m,

@@ -57,7 +57,7 @@ def _clear_refresh_cookie(response: Response) -> None:
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-@limiter.limit("10/minute")
+@limiter.limit("50/minute")
 async def register(
     body: RegisterRequest,
     request: Request,  # noqa: ARG001  # required by slowapi
@@ -85,7 +85,7 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("5/minute")
+@limiter.limit("50/minute")
 async def login(
     request: Request,  # required by slowapi
     body: LoginRequest,

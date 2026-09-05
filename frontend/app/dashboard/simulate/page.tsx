@@ -6,6 +6,7 @@ import SimulationProgress from "@/components/simulation/SimulationProgress";
 import SimulationResults from "@/components/simulation/SimulationResults";
 import AppShell from "@/components/layout/AppShell";
 import Button from "@/components/ui/Button";
+import { useAuthStore } from "@/store/auth-store";
 
 type SimStatus = "idle" | "pending" | "running" | "complete" | "failed";
 
@@ -34,7 +35,26 @@ export default function SimulatePage() {
   const [result, setResult] = useState<SimResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [simId, setSimId] = useState<string | null>(null);
+  const [defaultPortfolioId, setDefaultPortfolioId] = useState<string>("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    async function fetchPortfolio() {
+      try {
+        const token = useAuthStore.getState().accessToken;
+        const res = await fetch(`${API_URL}/portfolios`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setDefaultPortfolioId(data[0].id);
+          }
+        }
+      } catch (err) {}
+    }
+    fetchPortfolio();
+  }, []);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -48,7 +68,7 @@ export default function SimulatePage() {
       stopPolling();
       pollRef.current = setInterval(async () => {
         try {
-          const token = localStorage.getItem("access_token");
+          const token = useAuthStore.getState().accessToken;
           const resp = await fetch(`${API_URL}/simulations/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -88,7 +108,7 @@ export default function SimulatePage() {
     setErrorMsg(null);
 
     try {
-      const token = localStorage.getItem("access_token");
+      const token = useAuthStore.getState().accessToken;
       const resp = await fetch(`${API_URL}/simulations`, {
         method: "POST",
         headers: {
@@ -146,7 +166,7 @@ export default function SimulatePage() {
 
       {/* Form */}
       {(status === "idle" || status === "complete" || status === "failed") && (
-        <SimulationForm onRun={handleRun} disabled={isRunning} />
+        <SimulationForm onRun={handleRun} disabled={isRunning} defaultPortfolioId={defaultPortfolioId} />
       )}
 
       {/* Progress */}

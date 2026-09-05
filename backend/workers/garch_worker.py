@@ -22,6 +22,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 import pandas as pd
 import numpy as np
 
+import app.ai.models  # noqa: F401
+import app.alerts.models  # noqa: F401
+import app.auth.models  # noqa: F401
+import app.replays.models  # noqa: F401
+import app.simulations.models  # noqa: F401
+import app.portfolios.models  # noqa: F401
+import app.risk.models  # noqa: F401
 from app.risk.models import GarchFit, SymbolSubscription
 from quant.garch import fit_garch
 
@@ -91,7 +98,7 @@ async def refit_symbol(
             beta=Decimal(str(result.beta)) if result.beta is not None else None,
             fitted_at=now
         )
-        db.add(fit_record)
+        await db.merge(fit_record)
         await db.commit()
         
         logger.info("Refit GARCH for %s: vol=%f, source=%s", symbol, result.volatility, payload["source"])

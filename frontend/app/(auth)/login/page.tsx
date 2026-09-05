@@ -27,7 +27,7 @@ export default function LoginPage() {
       setAccessToken(data.access_token);
       const payload = JSON.parse(atob(data.access_token.split(".")[1]));
       setUser({ id: payload.sub, email, role: "user" });
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred."

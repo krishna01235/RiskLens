@@ -94,6 +94,43 @@ async def run_ingestion() -> None:
     active_subscriptions = await get_initial_subscriptions()
     logger.info(f"Loaded {len(active_subscriptions)} initial subscriptions")
     
+    if finnhub_api_key == "fake_key":
+        import time
+        import random
+        logger.info("Using MOCK Finnhub WebSocket loop (fake_key detected).")
+        
+        class MockWS:
+            async def send(self, data: str) -> None:
+                pass
+                
+        mock_ws = MockWS()
+        listener_task = asyncio.create_task(control_channel_listener(redis, mock_ws))
+        
+        try:
+            while True:
+                await asyncio.sleep(1.0)
+                if not active_subscriptions:
+                    continue
+                    
+                now_ms = int(time.time() * 1000)
+                for symbol in list(active_subscriptions):
+                    price = 100.0 * (1.0 + (random.random() - 0.5) * 0.05)
+                    await redis.xadd(
+                        "market:ticks",
+                        {
+                            "symbol": symbol,
+                            "price": str(price),
+                            "timestamp": str(now_ms),
+                        },
+                        maxlen=100000,
+                        approximate=True,
+                    )
+        finally:
+            listener_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await listener_task
+        return
+
     attempt = 0
     while True:
         try:

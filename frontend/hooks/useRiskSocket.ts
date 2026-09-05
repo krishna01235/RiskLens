@@ -105,7 +105,15 @@ export function useRiskSocket(portfolioId: string | null) {
           try {
             const data = JSON.parse(event.data);
             if (data.type === "risk_update" && data.portfolio_id === portfolioId) {
-              setRiskData(data);
+              setRiskData(prev => ({
+                ...prev,
+                ...data,
+                // Ensure we don't accidentally wipe out metrics if the fast path doesn't send them
+                metrics: data.metrics !== undefined ? data.metrics : prev?.metrics,
+                data_status: data.data_status !== undefined ? data.data_status : prev?.data_status,
+                risk_contributions: data.risk_contributions !== undefined ? data.risk_contributions : prev?.risk_contributions,
+                correlation_flags: data.correlation_flags !== undefined ? data.correlation_flags : prev?.correlation_flags,
+              }));
             } else if (data.type === "alert" && data.portfolio_id === portfolioId) {
               setAlertMsg(data);
               // Clear old decision when a new alert fires

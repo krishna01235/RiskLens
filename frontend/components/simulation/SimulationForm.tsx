@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -18,6 +18,7 @@ import Button from "@/components/ui/Button";
 interface Props {
   onRun: (portfolioId: string, horizonDays: number, numPaths: number) => void;
   disabled: boolean;
+  defaultPortfolioId?: string;
 }
 
 const HORIZONS = [
@@ -33,11 +34,17 @@ const PATH_COUNTS = [
   { label: "100K", value: 100_000 },
 ];
 
-export default function SimulationForm({ onRun, disabled }: Props) {
-  const [portfolioId, setPortfolioId] = useState("");
+export default function SimulationForm({ onRun, disabled, defaultPortfolioId = "" }: Props) {
+  const [portfolioId, setPortfolioId] = useState(defaultPortfolioId);
   const [horizon, setHorizon] = useState(30);
   const [numPaths, setNumPaths] = useState(50_000);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (defaultPortfolioId && !portfolioId) {
+      setPortfolioId(defaultPortfolioId);
+    }
+  }, [defaultPortfolioId, portfolioId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

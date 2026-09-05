@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Upload, Edit3, ArrowLeft, Loader2, IndianRupee, DollarSign } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/store/auth-store";
 
 import ActionCard from "@/components/onboarding/ActionCard";
 import FileDropzone from "@/components/onboarding/FileDropzone";
@@ -61,11 +62,10 @@ export default function OnboardingPage() {
     try {
       // apiClient.post by default uses JSON, but we can override it if we wrote it that way
       // We'll use native fetch here to easily send FormData
-      const token = localStorage.getItem("access_token");
       const res = await fetch("http://localhost:8000/portfolios/import/preview", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
         },
         body: formData,
       });

@@ -28,14 +28,10 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
-redis_pool = redis.ConnectionPool.from_url(settings.redis_url, decode_responses=True)
+redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
 
 async def get_redis() -> AsyncGenerator[redis.Redis, None]:
-    client = redis.Redis.from_pool(redis_pool)
-    try:
-        yield client
-    finally:
-        await client.aclose()
+    yield redis_client
 
 # The token URL is used only to populate the Swagger UI "Authorize" dialog.
 # Actual token issuance happens in /auth/login.

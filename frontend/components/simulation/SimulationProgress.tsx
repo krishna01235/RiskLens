@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 
@@ -27,7 +27,14 @@ export default function SimulationProgress({ progress, status }: Props) {
       </div>
 
       {/* Progress bar */}
-      <div className="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden">
+      <div
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Simulation progress"
+        className="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden"
+      >
         <div
           className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
           style={{ width: `${Math.max(pct, status === "pending" ? 3 : pct)}%` }}

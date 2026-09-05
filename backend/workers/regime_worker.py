@@ -19,6 +19,13 @@ import pandas as pd
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+import app.ai.models  # noqa: F401
+import app.alerts.models  # noqa: F401
+import app.auth.models  # noqa: F401
+import app.replays.models  # noqa: F401
+import app.simulations.models  # noqa: F401
+import app.portfolios.models  # noqa: F401
+import app.risk.models  # noqa: F401
 from app.risk.models import RegimeState
 from quant.regime import fit_hmm, forward_probability
 

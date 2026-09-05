@@ -176,8 +176,22 @@ async def seed_price_history(
         return
     seeded.add(symbol)  # never retry-spam the REST endpoint within a run
 
-    if not finnhub_api_key:
-        logger.info("No FINNHUB_API_KEY set; skipping REST bootstrap for %s", symbol)
+    if not finnhub_api_key or finnhub_api_key == "fake_key":
+        logger.info("No valid FINNHUB_API_KEY set; generating synthetic history for %s", symbol)
+        import random
+        # simple random walk starting at 100
+        price = 100.0
+        random.seed(symbol)
+        mapping: dict[str, str] = {}
+        now_ts = time.time()
+        for i in range(BOOTSTRAP_DAYS):
+            day_ts = now_ts - (BOOTSTRAP_DAYS - i) * 86400
+            day = datetime.fromtimestamp(day_ts, tz=UTC).date().isoformat()
+            price *= (1.0 + (random.random() - 0.5) * 0.05)
+            mapping[day] = str(price)
+        
+        await redis.hset(f"{_PRICE_HISTORY_PREFIX}{symbol}", mapping=mapping)
+        logger.info("Seeded %d days of synthetic history for %s", len(mapping), symbol)
         return
 
     try:
@@ -667,7 +681,7 @@ async def run_slow_path() -> None:
                         continue
 
                     await seed_price_history(redis, symbol, finnhub_api_key, seeded)
-                    await record_tick(redis, symbol, price, float(timestamp_str))
+                    await record_tick(redis, symbol, price, float(timestamp_str) / 1000.0)
 
                     affected = await redis.smembers(f"{_REVERSE_INDEX_PREFIX}{symbol}")
                     batcher.add(set(affected), now)

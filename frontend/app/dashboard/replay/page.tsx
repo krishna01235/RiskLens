@@ -15,6 +15,7 @@ import {
 import AppShell from "@/components/layout/AppShell";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { useAuthStore } from "@/store/auth-store";
 
 type RiskState = "safe" | "watch" | "high" | "breached";
 
@@ -60,7 +61,7 @@ export default function ReplayPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+    const token = useAuthStore.getState().accessToken;
     if (!token) return;
     fetch(`${API_URL}/portfolios`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
@@ -83,7 +84,7 @@ export default function ReplayPage() {
       stopPolling();
       pollRef.current = setInterval(async () => {
         try {
-          const token = localStorage.getItem("access_token");
+          const token = useAuthStore.getState().accessToken;
           const resp = await fetch(`${API_URL}/replays/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -111,7 +112,7 @@ export default function ReplayPage() {
     setReplayData(null);
 
     try {
-      const token = localStorage.getItem("access_token");
+      const token = useAuthStore.getState().accessToken;
       const resp = await fetch(`${API_URL}/replays`, {
         method: "POST",
         headers: {
@@ -340,12 +341,10 @@ export default function ReplayPage() {
                     color: "var(--color-text-primary)",
                     fontSize: "12px",
                   }}
-                  labelFormatter={(val: string | number) =>
-                    typeof val === "string" || typeof val === "number"
-                      ? new Date(val).toLocaleDateString()
-                      : String(val)
+                  labelFormatter={(val: any) =>
+                    val != null ? new Date(val as string | number).toLocaleDateString() : ""
                   }
-                  formatter={(val: number | string | undefined, name: string) => [
+                  formatter={(val: any, name: any) => [
                     typeof val === "number" ? `${(val * 100).toFixed(2)}%` : String(val ?? ""),
                     name === "var_95"
                       ? "95% VaR"

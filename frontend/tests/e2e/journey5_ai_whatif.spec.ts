@@ -10,7 +10,7 @@
 
 import { test, expect } from "@playwright/test";
 
-const email = `e2e-journey5-${Date.now()}@risklens-test.local`;
+const email = `e2e-journey5-${Date.now()}@risklens-test.com`;
 const password = "E2eTestPass123!";
 
 test.describe("Journey 5 — AI What-If", () => {
@@ -21,12 +21,15 @@ test.describe("Journey 5 — AI What-If", () => {
     await page.getByLabel(/^password$/i).fill(password);
     const confirmField = page.getByLabel(/confirm password/i);
     if (await confirmField.isVisible()) await confirmField.fill(password);
-    await page.getByRole("button", { name: /register|sign up/i }).click();
+    await page.getByRole("button", { name: /register|sign up|create account/i }).click();
     await page.waitForURL(/dashboard|onboarding/, { timeout: 15_000 });
-    const demoBtn = page.getByRole("button", { name: /demo|get started/i });
-    if (await demoBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    const demoBtn = page.getByRole("button", { name: /demo|get started/i }).first();
+    try {
+      await demoBtn.waitFor({ state: "visible", timeout: 10_000 });
       await demoBtn.click();
       await page.waitForURL(/dashboard/, { timeout: 15_000 });
+    } catch (e) {
+      // ignore
     }
     await page.close();
   });
@@ -43,12 +46,11 @@ test.describe("Journey 5 — AI What-If", () => {
 
     // ── Step 2: Open the AI Risk Analyst panel ────────────────────────────────
     const aiToggle = page
-      .getByRole("button", { name: /ai risk analyst|ask ai|what.?if/i })
-      .or(page.getByText(/ai risk analyst/i).first());
+      .getByRole("button", { name: /ai analyst|ai risk analyst/i })
+      .first();
 
-    if (await aiToggle.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await aiToggle.click();
-    }
+    await aiToggle.waitFor({ state: "visible", timeout: 10_000 });
+    await aiToggle.click();
 
     // Locate the chat input
     const chatInput = page

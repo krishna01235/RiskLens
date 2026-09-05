@@ -18,6 +18,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.portfolios.csv_normalizer import parse_csv_bytes, parse_rows, suggest_mapping
@@ -101,6 +102,7 @@ async def _get_portfolio_owned(
 
 async def create_demo_portfolio(
     db: AsyncSession,
+    redis: Redis,
     user_id: uuid.UUID,
     market: DemoMarket = DemoMarket.us,
 ) -> Portfolio:
@@ -144,6 +146,7 @@ async def create_demo_portfolio(
                 added_at=datetime.now(UTC),
             )
         )
+        await update_symbol_index(db, redis, symbol, portfolio.id, 1)
 
     await db.commit()
     await db.refresh(portfolio, ["holdings"])
@@ -155,7 +158,11 @@ async def get_user_portfolios(
     user_id: uuid.UUID,
 ) -> list[Portfolio]:
     """Return all portfolios owned by the user."""
-    result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
+    result = await db.execute(
+        select(Portfolio)
+        .options(selectinload(Portfolio.holdings))
+        .where(Portfolio.user_id == user_id)
+    )
     return list(result.scalars().all())
 
 
