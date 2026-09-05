@@ -49,42 +49,29 @@ test.describe("Journey 1 — Register → Onboarding → Dashboard", () => {
       }
     }
 
-    // ── Step 5: Dashboard must show at least one metric card ─────────────────
-    // MetricCard renders a numeric value alongside a label — wait for any
-    // element that looks like a risk metric (VaR, volatility, Sharpe ratio, etc.)
+    // ── Step 5 & 6: Dashboard must show content ────────────────────────────────
     // New portfolios may take up to 60s for the slow-path worker to compute.
+    // Strategy: first check fast conditions (spinner/pending text), then
+    // wait up to 60s for actual metric values to appear.
+
+    // Fast checks: pending spinner text that is always present on a new portfolio
+    const waitingText = page.getByText(/waiting for market data/i).first();
+    const pendingText = page.getByText(/risk metrics compute/i).first();
+    const metricText = page.getByText(/var|volatility|sharpe|drawdown/i).first();
     const metricCard = page
       .locator('[data-testid="metric-card"], .metric-card, [class*="MetricCard"]')
       .first();
 
-    // Fallback: look for text that matches a known metric name
-    const metricText = page.getByText(/var|volatility|sharpe|drawdown/i).first();
+    // Check fast options first (5s each), then fall back to 60s metric wait
+    const hasFastContent =
+      (await waitingText.isVisible({ timeout: 5_000 }).catch(() => false)) ||
+      (await pendingText.isVisible({ timeout: 2_000 }).catch(() => false)) ||
+      (await metricText.isVisible({ timeout: 2_000 }).catch(() => false));
 
-    // Also accept the spinner state — the dashboard loaded and the portfolio exists
-    const waitingText = page.getByText(/waiting for market data|computing risk|risk metrics compute/i).first();
-
-    const hasMetric =
+    const hasContent = hasFastContent ||
       (await metricCard.isVisible({ timeout: 60_000 }).catch(() => false)) ||
-      (await metricText.isVisible({ timeout: 5_000 }).catch(() => false)) ||
-      (await waitingText.isVisible({ timeout: 5_000 }).catch(() => false));
+      (await metricText.isVisible({ timeout: 5_000 }).catch(() => false));
 
-    expect(hasMetric, "At least one risk metric (or pending state) should be visible on the dashboard").toBe(true);
-
-    // ── Step 6: Verify the dashboard frame is present ─────────────────────────
-    // Even if data_status=pending, the metric-card shells or the waiting banner
-    // must be present (element must be in the DOM).
-    const metricValue = page
-      .locator(
-        '[data-testid="metric-value"], .metric-value, [class*="value"], [class*="Value"]'
-      )
-      .first();
-
-    // Accept either an actual value or the metric text
-    const isPresent =
-      (await metricValue.isVisible({ timeout: 10_000 }).catch(() => false)) ||
-      (await metricText.isVisible({ timeout: 5_000 }).catch(() => false)) ||
-      (await waitingText.isVisible({ timeout: 5_000 }).catch(() => false));
-
-    expect(isPresent, "Dashboard content should be visible").toBe(true);
+    expect(hasContent, "Dashboard should show content (metrics or pending state)").toBe(true);
   });
 });

@@ -28,6 +28,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.config import get_settings
 from app.portfolios.models import Portfolio
+from app.risk.models import RiskSnapshot  # noqa: F401 — must be imported to register the mapper
 from app.simulations.models import Simulation
 from app.simulations.schemas import SimulationResultPayload
 from app.simulations import service as sim_service

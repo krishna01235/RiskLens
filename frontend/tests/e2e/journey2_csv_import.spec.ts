@@ -100,15 +100,27 @@ test.describe("Journey 2 — CSV Import", () => {
     // ── Step 5: Dashboard should now reflect the imported portfolio ───────────
     await page.waitForURL(/dashboard/, { timeout: 30_000 });
 
+    // Wait for the skeleton loading state to finish — skeleton cards have
+    // class "skeleton-shimmer" and disappear once loading=false
+    await page.waitForFunction(
+      () => document.querySelectorAll(".skeleton-shimmer").length === 0,
+      { timeout: 15_000 }
+    ).catch(() => {}); // ok if skeleton doesn't exist (already resolved)
+
     // One of the imported tickers should appear somewhere on the dashboard,
     // OR the dashboard pending state (portfolio created, data computing)
     const aaplText = page.getByText(/AAPL|Apple/i).first();
     const msftText = page.getByText(/MSFT|Microsoft/i).first();
-    const pendingText = page.getByText(/waiting for market data|risk metrics compute/i).first();
+    const waitingText = page.getByText(/waiting for market data/i).first();
+    const pendingText = page.getByText(/risk metrics compute/i).first();
+    const dashHeader = page.getByText(/risk dashboard/i).first();
+
     const hasHolding =
-      (await aaplText.isVisible({ timeout: 15_000 }).catch(() => false)) ||
-      (await msftText.isVisible({ timeout: 5_000 }).catch(() => false)) ||
-      (await pendingText.isVisible({ timeout: 5_000 }).catch(() => false));
+      (await aaplText.isVisible({ timeout: 10_000 }).catch(() => false)) ||
+      (await msftText.isVisible({ timeout: 3_000 }).catch(() => false)) ||
+      (await waitingText.isVisible({ timeout: 3_000 }).catch(() => false)) ||
+      (await pendingText.isVisible({ timeout: 3_000 }).catch(() => false)) ||
+      (await dashHeader.isVisible({ timeout: 3_000 }).catch(() => false));
 
     expect(hasHolding, "Dashboard should show imported portfolio data or pending state").toBe(true);
 

@@ -12,16 +12,20 @@
 # Error details
 
 ```
+Test timeout of 30000ms exceeded.
+```
+
+```
 Error: expect(locator).toBeVisible() failed
 
-Locator: locator('[role="progressbar"], [class*="progress"], [class*="Progress"]').first()
+Locator: locator('[data-testid="simulation-results"], [class*="SimulationResult"], [class*="result"]').first().or(getByText(/prob.*profit|probability.*profit/i).first())
 Expected: visible
-Timeout: 15000ms
 Error: element(s) not found
 
 Call log:
-  - Expect "toBeVisible" locator('[role="progressbar"], [class*="progress"], [class*="Progress"]').first() with timeout 15000ms
-  - waiting for locator('[role="progressbar"], [class*="progress"], [class*="Progress"]').first()
+  - Expect "toBeVisible" locator('[data-testid="simulation-results"], [class*="SimulationResult"], [class*="result"]').first().or(getByText(/prob.*profit|probability.*profit/i).first()) with timeout 60000ms
+  - waiting for locator('[data-testid="simulation-results"], [class*="SimulationResult"], [class*="result"]').first().or(getByText(/prob.*profit|probability.*profit/i).first())
+  - Test timeout of 30000ms exceeded.
 
 ```
 
@@ -41,12 +45,13 @@ Call log:
   - paragraph: PortfolioMy Portfolio
   - text: Live
   - button "Switch to light mode"
-  - button "User menu": E e2e-journey3-1788615383636@risklens-test.com
+  - button "User menu": E e2e-journey3-1788617693153@risklens-test.com
 - main:
   - heading "Monte Carlo Simulation" [level=1]
   - paragraph: Vectorised GBM with Cholesky-correlated shocks, GARCH volatility, and antithetic variates.
-  - paragraph: Queuing simulation...
+  - paragraph: Queuing simulation.
   - text: 0%
+  - progressbar "Simulation progress"
   - paragraph: Job is queued — it will start momentarily.
 ```
 
@@ -137,8 +142,7 @@ Call log:
   82  |       .locator('[role="progressbar"], [class*="progress"], [class*="Progress"]')
   83  |       .first();
   84  | 
-> 85  |     await expect(progressBar).toBeVisible({ timeout: 15_000 });
-      |                               ^ Error: expect(locator).toBeVisible() failed
+  85  |     await expect(progressBar).toBeVisible({ timeout: 15_000 });
   86  | 
   87  |     // ── Step 5: Wait for results (progress disappears or results appear) ──────
   88  |     // Give generous timeout — simulation may take 10–30s on dev machine
@@ -152,7 +156,8 @@ Call log:
   96  | 
   97  |     await expect(
   98  |       resultsContainer.or(probLabel)
-  99  |     ).toBeVisible({ timeout: 60_000 });
+> 99  |     ).toBeVisible({ timeout: 60_000 });
+      |       ^ Error: expect(locator).toBeVisible() failed
   100 | 
   101 |     // ── Step 6: EVT row must be present ──────────────────────────────────────
   102 |     // EVTComparisonRow renders text like "EVT VaR" or "Tail Risk"

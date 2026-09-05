@@ -19,6 +19,8 @@ export default defineConfig({
   /* One worker; E2E tests share a backend and can conflict */
   workers: 1,
   reporter: [["html", { outputFolder: "playwright-report", open: "never" }]],
+  /* Global test timeout — simulation jobs can take 60s+ on dev machines */
+  timeout: 120_000,
 
   use: {
     baseURL: "http://localhost:3000",
