@@ -1,7 +1,7 @@
 'use client'
 
-import { motion, useReducedMotion } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { motion, useReducedMotion, useInView } from 'framer-motion'
+import { useMemo, useState, useRef } from 'react'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -16,6 +16,7 @@ import {
 import { assets, events, matrix, phases, regimes, type RiskTheme } from '@/lib/risk-lab'
 import { useMediaQuery, usePointerRef, useScrollProgress } from '@/components/risklens/use-risklens'
 import GatewayBackground from '@/components/risklens/background'
+import RiskAnalystSection from '@/components/risklens/ai-analyst'
 import GatewayFlow from '@/components/ui/gateway-flow'
 import MonteCarloChapter from '@/components/risklens/monte-carlo'
 import RiskSurface from '@/components/risklens/risk-surface'
@@ -222,6 +223,9 @@ export default function RiskLensExperience() {
   const use2D = isMobile || !!reduced
   const palette = palettes[theme]
 
+  const aiRef = useRef<HTMLElement>(null)
+  const aiInView = useInView(aiRef, { margin: '-300px' })
+
   const runStress = () => {
     setShock(true)
     setStressPhase(5)
@@ -234,7 +238,7 @@ export default function RiskLensExperience() {
 
   return (
     <main data-theme={theme} data-landing="true" className="relative min-h-screen bg-background text-foreground landing-root">
-      <GatewayBackground pointer={pointer} progress={progress} stress={shock} palette={palette} />
+      <GatewayBackground pointer={pointer} progress={progress} stress={shock} palette={palette} aiSectionInView={aiInView} />
 
       {/* nav */}
       <nav className="fixed left-1/2 top-4 z-50 flex w-[calc(100%-2rem)] max-w-6xl -translate-x-1/2 items-center justify-between border border-grid bg-background/70 px-4 py-3 backdrop-blur-md" aria-label="Main navigation">
@@ -332,6 +336,9 @@ export default function RiskLensExperience() {
           </motion.div>
         )}
       </section>
+
+      {/* ai analyst */}
+      <RiskAnalystSection ref={aiRef} onTriggerStress={runStress} />
 
       {/* why */}
       <Section id="why" eyebrow="00 / THE CASE FOR CLARITY" title="Risk should be a surface, not a spreadsheet.">
