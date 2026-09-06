@@ -37,3 +37,105 @@ body {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* ── Landing page design tokens ─────────────────────────────────────────────
+   Scoped to [data-landing="true"] so they are completely isolated from the
+   dashboard's --color-* token system defined in styles/tokens.css.
+   The RiskLensExperience component adds data-landing="true" to its <main>.
+   ──────────────────────────────────────────────────────────────────────────*/
+[data-landing="true"] {
+  color-scheme: dark;
+  --background: #061014;
+  --foreground: #d7e1e8;
+  --card: #0a181d;
+  --muted: #7e949d;
+  --grid: rgba(142, 184, 193, 0.16);
+  --accent: #5ce1e6;
+  --accent-soft: rgba(92, 225, 230, 0.12);
+  --accent-glow: rgba(92, 225, 230, 0.24);
+  --accent-foreground: #061014;
+  --danger: #ff6b6b;
+  --success: #8de969;
+  --warning: #f5b942;
+  --font-display: var(--font-ui, Arial, sans-serif);
+  --font-technical: var(--font-mono, 'Courier New', monospace);
+
+  /* Map Tailwind color utilities to our tokens */
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-display);
+}
+
+/* Theme variants — applied alongside data-landing="true" */
+[data-landing="true"][data-theme="terminal"] {
+  --accent: #9ef01a;
+  --accent-glow: rgba(158, 240, 26, 0.22);
+  --danger: #ffb000;
+}
+[data-landing="true"][data-theme="amber"] {
+  --accent: #f5b942;
+  --accent-glow: rgba(245, 185, 66, 0.22);
+  --danger: #ff6847;
+}
+[data-landing="true"][data-theme="crimson"] {
+  --accent: #ff5c75;
+  --accent-glow: rgba(255, 92, 117, 0.22);
+  --danger: #ffb3b3;
+}
+[data-landing="true"][data-theme="mono"] {
+  --accent: #d7e1e8;
+  --accent-glow: rgba(215, 225, 232, 0.18);
+  --danger: #aab4bb;
+}
+
+/* Landing-page utility classes — scoped to avoid collisions */
+[data-landing="true"] .mono {
+  font-family: var(--font-technical);
+}
+[data-landing="true"] ::selection {
+  background: var(--accent);
+  color: var(--background);
+}
+[data-landing="true"] button,
+[data-landing="true"] a,
+[data-landing="true"] select {
+  -webkit-tap-highlight-color: transparent;
+}
+[data-landing="true"] button:focus-visible,
+[data-landing="true"] a:focus-visible,
+[data-landing="true"] select:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* Tailwind-style color helpers used in experience.tsx */
+[data-landing="true"] .text-accent { color: var(--accent); }
+[data-landing="true"] .text-accent-foreground { color: var(--accent-foreground); }
+[data-landing="true"] .text-danger { color: var(--danger); }
+[data-landing="true"] .text-muted { color: var(--muted); }
+[data-landing="true"] .text-success { color: var(--success); }
+[data-landing="true"] .text-foreground { color: var(--foreground); }
+[data-landing="true"] .bg-accent { background-color: var(--accent); }
+[data-landing="true"] .bg-background { background-color: var(--background); }
+[data-landing="true"] .bg-card { background-color: var(--card); }
+[data-landing="true"] .border-accent { border-color: var(--accent); }
+[data-landing="true"] .border-danger { border-color: var(--danger); }
+[data-landing="true"] .border-grid { border-color: var(--grid); }
+[data-landing="true"] .bg-grid { background-color: var(--grid); }
+
+/* Reduce motion for the landing page */
+@media (prefers-reduced-motion: reduce) {
+  [data-landing="true"] *,
+  [data-landing="true"] *::before,
+  [data-landing="true"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-landing="true"] h1 {
+    font-size: clamp(3.5rem, 18vw, 6rem);
+  }
+}
