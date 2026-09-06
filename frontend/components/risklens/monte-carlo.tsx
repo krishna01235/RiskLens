@@ -22,7 +22,8 @@ type Palette = { accent: string; danger: string; muted: string; grid: string }
 
 function toPoints(path: MonteCarloPath, steps: number, id: number, count: number): [number, number, number][] {
   const z = (id / (count - 1) - 0.5) * 3.4
-  return path.series.map((v, s) => [(s / steps) * 5 - 2.5, v * 0.14, z])
+  // Scale X to span wider (-3.8 to 3.8) and Y to be taller to fill the space
+  return path.series.map((v, s) => [(s / steps) * 7.6 - 3.8, v * 0.18, z])
 }
 
 function PathCloud({
@@ -47,9 +48,12 @@ function PathCloud({
   useFrame((state, delta) => {
     if (!group.current) return
     const p = pointer.current
-    group.current.rotation.y += (p.x * 0.5 - group.current.rotation.y) * 0.05
-    group.current.rotation.x += (-p.y * 0.25 - group.current.rotation.x) * 0.05
-    if (!reduced) group.current.rotation.y += delta * 0.04
+    // Rotate to give a slight isometric angle by default, shifted by mouse
+    const targetY = p.x * 0.5 + 0.3
+    const targetX = -p.y * 0.25 + 0.1
+    group.current.rotation.y += (targetY - group.current.rotation.y) * 0.05
+    group.current.rotation.x += (targetX - group.current.rotation.x) * 0.05
+    if (!reduced) group.current.rotation.y += delta * 0.03
   })
   return (
     <group ref={group}>
@@ -80,7 +84,8 @@ function PathCloud({
           />
         )
       })}
-      <Line points={[[-2.5, 0, -1.8], [2.5, 0, -1.8]] as unknown as Vector3[]} color={palette.grid} lineWidth={1} />
+      {/* Zero line */}
+      <Line points={[[-3.8, 0, -1.8], [3.8, 0, -1.8]] as unknown as Vector3[]} color={palette.grid} lineWidth={1} />
     </group>
   )
 }
@@ -88,8 +93,7 @@ function PathCloud({
 function Scene3D(props: Parameters<typeof PathCloud>[0]) {
   return (
     <Canvas dpr={[1, 1.5]} gl={{ antialias: true }} onPointerMissed={() => props.setSelected(null)}>
-      <color attach="background" args={['#0a181d']} />
-      <PerspectiveCamera makeDefault position={[3.4, 2.4, 5.6]} fov={46} />
+      <PerspectiveCamera makeDefault position={[0, 0, 7.5]} fov={40} onUpdate={(c) => c.lookAt(0, -0.5, 0)} />
       <ambientLight intensity={0.7} />
       <PathCloud {...props} />
     </Canvas>
