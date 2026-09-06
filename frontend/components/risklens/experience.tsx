@@ -16,6 +16,7 @@ import {
 import { assets, events, matrix, phases, regimes, type RiskTheme } from '@/lib/risk-lab'
 import { useMediaQuery, usePointerRef, useScrollProgress } from '@/components/risklens/use-risklens'
 import GatewayBackground from '@/components/risklens/background'
+import GatewayFlow from '@/components/ui/gateway-flow'
 import MonteCarloChapter from '@/components/risklens/monte-carlo'
 import RiskSurface from '@/components/risklens/risk-surface'
 
@@ -82,25 +83,30 @@ function InteractiveHeading({ lines }: { lines: { text: string; accent?: boolean
     >
       {lines.map((line, li) => (
         <span key={li} className="block" aria-hidden="true">
-          {line.map((seg, si) =>
-            [...seg.text].map((ch) => {
-              const i = index++
-              if (ch === ' ') return <span key={`${li}-${si}-${i}`}>{'\u00A0'}</span>
-              return (
-                <motion.span
-                  key={`${li}-${si}-${i}`}
-                  className="inline-block cursor-default transition-colors duration-200 hover:text-accent"
-                  style={seg.accent ? { color: 'var(--accent)' } : undefined}
-                  initial={reduced ? false : { opacity: 0, y: '40%' }}
-                  animate={reduced ? undefined : { opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.02, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  whileHover={reduced ? undefined : { y: -10, scale: 1.06 }}
-                >
-                  {ch}
-                </motion.span>
-              )
-            }),
-          )}
+          {line.map((seg, si) => {
+            const words = seg.text.split(' ')
+            return words.map((word, wi) => (
+              <span key={`${li}-${si}-${wi}`} className="inline-block whitespace-nowrap">
+                {[...word].map((ch) => {
+                  const i = index++
+                  return (
+                    <motion.span
+                      key={`${li}-${si}-${wi}-${i}`}
+                      className="inline-block cursor-default transition-colors duration-200 hover:text-accent"
+                      style={seg.accent ? { color: 'var(--accent)' } : undefined}
+                      initial={reduced ? false : { opacity: 0, y: '40%' }}
+                      animate={reduced ? undefined : { opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.02, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                      whileHover={reduced ? undefined : { y: -10, scale: 1.06 }}
+                    >
+                      {ch}
+                    </motion.span>
+                  )
+                })}
+                {wi < words.length - 1 && <span>{'\u00A0'}</span>}
+              </span>
+            ))
+          })}
         </span>
       ))}
     </h1>
@@ -139,33 +145,6 @@ function Metric({ label, value, danger }: { label: string; value: string; danger
     <div className="border-l border-grid pl-4">
       <p className="mono text-[10px] tracking-widest text-muted">{label}</p>
       <p className={danger ? 'mono mt-2 text-2xl text-danger' : 'mono mt-2 text-2xl text-accent'}>{value}</p>
-    </div>
-  )
-}
-
-/* ---------- glass telemetry rail ---------- */
-
-const telemetry = [
-  ['SYS', 'ONLINE'],
-  ['MODEL', 'GARCH'],
-  ['REGIME', 'CALM'],
-  ['TAIL', 'LOW'],
-  ['LAT', '4.2ms'],
-]
-
-function TelemetryRail({ stress }: { stress: boolean }) {
-  return (
-    <div className="pointer-events-none fixed left-4 top-1/2 z-40 hidden -translate-y-1/2 flex-col gap-px border border-grid bg-background/50 backdrop-blur-md xl:flex">
-      {telemetry.map(([k, v]) => {
-        const hot = stress && k !== 'SYS' && k !== 'LAT'
-        const val = stress && k === 'REGIME' ? 'STRESS' : stress && k === 'TAIL' ? 'HIGH' : v
-        return (
-          <div key={k} className="flex w-32 items-center justify-between px-3 py-2">
-            <span className="mono text-[9px] tracking-widest text-muted">{k}</span>
-            <span className={`mono text-[9px] ${hot ? 'text-danger' : 'text-accent'}`}>{val}</span>
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -256,7 +235,6 @@ export default function RiskLensExperience() {
   return (
     <main data-theme={theme} data-landing="true" className="relative min-h-screen bg-background text-foreground landing-root">
       <GatewayBackground pointer={pointer} progress={progress} stress={shock} palette={palette} />
-      <TelemetryRail stress={shock} />
 
       {/* nav */}
       <nav className="fixed left-1/2 top-4 z-50 flex w-[calc(100%-2rem)] max-w-6xl -translate-x-1/2 items-center justify-between border border-grid bg-background/70 px-4 py-3 backdrop-blur-md" aria-label="Main navigation">
@@ -293,6 +271,9 @@ export default function RiskLensExperience() {
 
       {/* hero */}
       <section id="top" className="relative flex min-h-screen items-center overflow-hidden">
+        <div className="absolute inset-0 opacity-40">
+          <GatewayFlow className="h-full w-full" speed={1 + progress * 0.5 + (shock ? 0.9 : 0)} density={1} opacity={0.5 + progress * 0.25} hue={shock ? 150 : progress * 40} />
+        </div>
         <div className="relative z-10 mx-auto w-full max-w-7xl px-5 pt-24 md:px-10">
           <motion.p
             initial={{ opacity: 0 }}

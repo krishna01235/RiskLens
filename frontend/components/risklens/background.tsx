@@ -5,7 +5,6 @@ import { Float, PerspectiveCamera, Points, PointMaterial } from '@react-three/dr
 import { useReducedMotion } from 'framer-motion'
 import { useMemo, useRef, type MutableRefObject } from 'react'
 import type { Group } from 'three'
-import GatewayFlow from '@/components/ui/gateway-flow'
 
 type Pointer = MutableRefObject<{ x: number; y: number }>
 type Palette = { accent: string; danger: string; muted: string; grid: string }
@@ -82,16 +81,8 @@ export default function GatewayBackground({
   stress: boolean
   palette: Palette
 }) {
-  // Scroll drives speed/hue live (no iframe rebuild). Stress pushes both harder.
-  const speed = 0.55 + progress * 1.1 + (stress ? 0.9 : 0)
-  const hue = stress ? 150 : progress * 40
-  const opacity = 0.5 + progress * 0.25
-
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 bg-[#061014]" aria-hidden="true">
-      <div className="absolute inset-0 opacity-90">
-        <GatewayFlow className="h-full w-full" speed={speed} density={1} opacity={opacity} hue={hue} />
-      </div>
       <div className="absolute inset-0">
         <Canvas dpr={[1, 1.5]} gl={{ antialias: false, alpha: true }} style={{ background: 'transparent' }}>
           <PerspectiveCamera makeDefault position={[0, 0, 6]} fov={52} />
